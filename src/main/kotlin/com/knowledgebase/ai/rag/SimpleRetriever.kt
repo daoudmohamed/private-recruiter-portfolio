@@ -1,12 +1,12 @@
 package com.knowledgebase.ai.rag
 
+import com.knowledgebase.config.KnowledgeBaseProperties
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import mu.KotlinLogging
 import org.springframework.ai.document.Document
 import org.springframework.ai.vectorstore.SearchRequest
 import org.springframework.ai.vectorstore.VectorStore
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 
 private val logger = KotlinLogging.logger {}
@@ -17,11 +17,11 @@ private val logger = KotlinLogging.logger {}
 @Component
 class SimpleRetriever(
     private val vectorStore: VectorStore,
-    @Value("\${knowledgebase.rag.similarity-threshold:0.65}")
-    private val similarityThreshold: Double,
-    @Value("\${knowledgebase.rag.top-k:5}")
-    private val topK: Int
+    private val knowledgeBaseProperties: KnowledgeBaseProperties
 ) {
+    private val similarityThreshold = knowledgeBaseProperties.rag.similarityThreshold
+    private val topK = knowledgeBaseProperties.rag.topK
+
     /**
      * Retrieve relevant documents for a query.
      */

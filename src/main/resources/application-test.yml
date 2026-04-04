@@ -1,0 +1,25 @@
+spring:
+  main:
+    lazy-initialization: true
+  ai:
+    vectorstore:
+      qdrant:
+        initialize-schema: false
+
+logging:
+  level:
+    root: WARN
+    com.knowledgebase: INFO
+    org.springframework.ai: WARN
+
+knowledgebase:
+  security:
+    api-key: ""
+    admin-api-key: ""
+  recruiter-access:
+    enabled: false
+    request-invitation-enabled: false
+  documents:
+    scan-on-startup: false
+  qdrant:
+    configure-on-startup: false

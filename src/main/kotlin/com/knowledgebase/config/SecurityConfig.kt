@@ -14,10 +14,13 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
  */
 @Configuration
 @EnableWebFluxSecurity
-class SecurityConfig {
+class SecurityConfig(
+    private val knowledgeBaseProperties: KnowledgeBaseProperties
+) {
 
     @Bean
     fun securityWebFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
+        val publicPaths = knowledgeBaseProperties.security.publicPaths.toTypedArray()
         return http
             .csrf { it.disable() }
             .cors { it.configurationSource(corsConfigurationSource()) }
@@ -25,12 +28,7 @@ class SecurityConfig {
             .formLogin { it.disable() }
             .authorizeExchange { exchanges ->
                 exchanges
-                    .pathMatchers("/actuator/health/**").permitAll()
-                    .pathMatchers("/actuator/info").permitAll()
-                    .pathMatchers("/api-docs/**").permitAll()
-                    .pathMatchers("/swagger-ui/**").permitAll()
-                    .pathMatchers("/swagger-ui.html").permitAll()
-                    .pathMatchers("/webjars/**").permitAll()
+                    .pathMatchers(*publicPaths).permitAll()
                     .anyExchange().permitAll()  // API key checked by ApiKeyFilter
             }
             .build()
@@ -38,18 +36,13 @@ class SecurityConfig {
 
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
+        val corsProperties = knowledgeBaseProperties.security.cors
         val configuration = CorsConfiguration()
-        configuration.allowedOrigins = listOf(
-            "http://localhost:5173",
-            "http://localhost:5174",
-            "http://localhost:3000",
-            "http://127.0.0.1:5173",
-            "http://127.0.0.1:5174"
-        )
-        configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
-        configuration.allowedHeaders = listOf("*")
-        configuration.allowCredentials = true
-        configuration.maxAge = 3600L
+        configuration.allowedOrigins = corsProperties.allowedOrigins
+        configuration.allowedMethods = corsProperties.allowedMethods
+        configuration.allowedHeaders = corsProperties.allowedHeaders
+        configuration.allowCredentials = corsProperties.allowCredentials
+        configuration.maxAge = corsProperties.maxAgeSeconds
 
         val source = UrlBasedCorsConfigurationSource()
         source.registerCorsConfiguration("/**", configuration)

@@ -6,15 +6,14 @@ import com.knowledgebase.application.dto.DocumentUploadResponse
 import com.knowledgebase.application.dto.IngestionStatusResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.reactor.awaitSingleOrNull
 import mu.KotlinLogging
 import org.springframework.core.io.ByteArrayResource
+import org.springframework.core.io.buffer.DataBufferUtils
 import org.springframework.http.HttpStatus
 import org.springframework.http.codec.multipart.FilePart
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
-import java.nio.file.Path
 
 private val logger = KotlinLogging.logger {}
 
@@ -25,7 +24,8 @@ private val logger = KotlinLogging.logger {}
 @RequestMapping("/api/v1/documents")
 @Tag(name = "Documents", description = "Document ingestion endpoints")
 class DocumentIngestionController(
-    private val documentIngestionService: DocumentIngestionService
+    private val documentIngestionService: DocumentIngestionService,
+    private val folderScannerService: FolderScannerService
 ) {
     /**
      * Upload and ingest a document file.
@@ -39,19 +39,14 @@ class DocumentIngestionController(
         logger.info { "Uploading document: $filename" }
 
         try {
-            // Read file content
-            val bytes = withContext(Dispatchers.IO) {
-                filePart.content()
-                    .reduce { buffer1, buffer2 ->
-                        buffer1.write(buffer2)
-                        buffer1
-                    }
-                    .map { buffer ->
-                        val bytes = ByteArray(buffer.readableByteCount())
-                        buffer.read(bytes)
-                        bytes
-                    }
-                    .block() ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Empty file")
+            val buffer = DataBufferUtils.join(filePart.content())
+                .awaitSingleOrNull()
+                ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Empty file")
+
+            val bytes = try {
+                ByteArray(buffer.readableByteCount()).also { buffer.read(it) }
+            } finally {
+                DataBufferUtils.release(buffer)
             }
 
             val resource = ByteArrayResource(bytes)
@@ -82,13 +77,12 @@ class DocumentIngestionController(
     suspend fun scanFolder(): IngestionStatusResponse {
         logger.info { "Manual folder scan triggered" }
 
-        val folderPath = Path.of("documents/")
-        val results = documentIngestionService.ingestFolder(folderPath)
+        val results = folderScannerService.scanFolder()
 
         return IngestionStatusResponse(
-            totalDocuments = results.size,
-            documentsIngested = results.filter { it.success }.map { it.filename },
-            status = "Scan completed: ${results.count { it.success }}/${results.size} succeeded"
+            totalDocuments = results.totalDocuments,
+            documentsIngested = results.documentsIngested,
+            status = "Scan completed: ${results.documentsIngested.size} ingested, ${results.documentsSkipped} skipped, ${results.failedDocuments.size} failed"
         )
     }
 

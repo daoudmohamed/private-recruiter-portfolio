@@ -3,13 +3,14 @@ package com.knowledgebase.application.service
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.knowledgebase.ai.memory.RedisChatMemory
+import com.knowledgebase.config.KnowledgeBaseProperties
+import com.knowledgebase.config.RedisKeyspace
 import com.knowledgebase.domain.model.ConversationSession
 import com.knowledgebase.domain.model.SessionStatus
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import mu.KotlinLogging
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.redis.core.ReactiveRedisTemplate
 import org.springframework.stereotype.Service
 import java.time.Duration
@@ -23,15 +24,14 @@ private val logger = KotlinLogging.logger {}
  */
 @Service
 class SessionService(
-    @Qualifier("reactiveStringRedisTemplate")
+    @param:Qualifier("reactiveStringRedisTemplate")
     private val redisTemplate: ReactiveRedisTemplate<String, String>,
     private val objectMapper: ObjectMapper,
     private val chatMemory: RedisChatMemory,
-    @Value("\${knowledgebase.chat.session-timeout-hours:24}")
-    private val sessionTimeoutHours: Long
+    private val knowledgeBaseProperties: KnowledgeBaseProperties
 ) {
-    private val sessionPrefix = "session:"
-    private val sessionTtl = Duration.ofHours(sessionTimeoutHours)
+    private val sessionPrefix = RedisKeyspace.SESSION_PREFIX
+    private val sessionTtl = Duration.ofHours(knowledgeBaseProperties.chat.sessionTimeoutHours)
 
     /**
      * Creates a new conversation session.

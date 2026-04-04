@@ -1,6 +1,80 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+:root {
+  color-scheme: dark;
+  --app-bg: #050816;
+  --app-text: #e2e8f0;
+  --panel: rgba(15, 23, 42, 0.8);
+  --panel-strong: rgba(15, 23, 42, 0.92);
+  --panel-soft: rgba(15, 23, 42, 0.62);
+  --surface: rgba(2, 6, 23, 0.78);
+  --surface-soft: rgba(15, 23, 42, 0.62);
+  --surface-muted: rgba(15, 23, 42, 0.48);
+  --border: rgba(148, 163, 184, 0.22);
+  --border-strong: rgba(148, 163, 184, 0.34);
+  --text-primary: #f8fafc;
+  --text-secondary: #e2e8f0;
+  --text-muted: #cbd5e1;
+  --text-subtle: #94a3b8;
+  --accent: #67e8f9;
+  --accent-strong: #38bdf8;
+  --accent-soft: rgba(103, 232, 249, 0.16);
+  --success-bg: rgba(6, 95, 70, 0.36);
+  --success-border: rgba(52, 211, 153, 0.42);
+  --success-text: #a7f3d0;
+  --warning-bg: rgba(120, 53, 15, 0.34);
+  --warning-border: rgba(251, 191, 36, 0.38);
+  --warning-text: #fde68a;
+  --danger-bg: rgba(127, 29, 29, 0.42);
+  --danger-border: rgba(248, 113, 113, 0.42);
+  --danger-text: #fecaca;
+  --brand-gradient-from: #ffffff;
+  --brand-gradient-to: #94a3b8;
+  --orb-a: rgba(6, 182, 212, 0.18);
+  --orb-b: rgba(14, 165, 233, 0.16);
+  --orb-c: rgba(56, 189, 248, 0.08);
+  --shadow-soft: 0 18px 60px rgba(2, 6, 23, 0.32);
+  --input-bg: rgba(15, 23, 42, 0.66);
+}
+
+:root.theme-light {
+  color-scheme: light;
+  --app-bg: #f3f6fb;
+  --app-text: #0f172a;
+  --panel: rgba(255, 255, 255, 0.88);
+  --panel-strong: rgba(255, 255, 255, 0.96);
+  --panel-soft: rgba(255, 255, 255, 0.8);
+  --surface: rgba(255, 255, 255, 0.96);
+  --surface-soft: rgba(248, 250, 252, 0.96);
+  --surface-muted: rgba(226, 232, 240, 0.9);
+  --border: rgba(15, 23, 42, 0.12);
+  --border-strong: rgba(15, 23, 42, 0.2);
+  --text-primary: #0f172a;
+  --text-secondary: #1e293b;
+  --text-muted: #334155;
+  --text-subtle: #475569;
+  --accent: #0f766e;
+  --accent-strong: #1d4ed8;
+  --accent-soft: rgba(15, 118, 110, 0.12);
+  --success-bg: rgba(209, 250, 229, 0.96);
+  --success-border: rgba(5, 150, 105, 0.3);
+  --success-text: #065f46;
+  --warning-bg: rgba(254, 243, 199, 0.98);
+  --warning-border: rgba(217, 119, 6, 0.3);
+  --warning-text: #78350f;
+  --danger-bg: rgba(254, 226, 226, 0.98);
+  --danger-border: rgba(220, 38, 38, 0.24);
+  --danger-text: #991b1b;
+  --brand-gradient-from: #0f172a;
+  --brand-gradient-to: #475569;
+  --orb-a: rgba(34, 211, 238, 0.16);
+  --orb-b: rgba(59, 130, 246, 0.12);
+  --orb-c: rgba(148, 163, 184, 0.14);
+  --shadow-soft: 0 20px 60px rgba(15, 23, 42, 0.12);
+  --input-bg: rgba(255, 255, 255, 0.92);
+}
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -14,6 +88,8 @@
 
   body {
     min-height: 100vh;
+    background: var(--app-bg);
+    color: var(--app-text);
   }
 
   #root {
@@ -21,8 +97,8 @@
   }
 
   ::selection {
-    background: rgb(6 182 212 / 0.3);
-    color: rgb(165 243 252);
+    background: color-mix(in srgb, var(--accent) 28%, transparent);
+    color: var(--text-primary);
   }
 
   ::-webkit-scrollbar {
@@ -31,11 +107,167 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgb(51 65 85 / 0.7);
+    background: color-mix(in srgb, var(--text-subtle) 65%, transparent);
     border-radius: 3px;
   }
 
   ::-webkit-scrollbar-track {
     background: transparent;
+  }
+}
+
+@layer components {
+  .app-shell {
+    background: var(--app-bg);
+    color: var(--text-secondary);
+  }
+
+  .theme-nav {
+    background: color-mix(in srgb, var(--panel-strong) 88%, transparent);
+    border-color: var(--border);
+  }
+
+  .theme-panel {
+    background: var(--panel);
+    border-color: var(--border);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .theme-panel-strong {
+    background: var(--panel-strong);
+    border-color: var(--border);
+  }
+
+  .theme-panel-soft {
+    background: var(--panel-soft);
+    border-color: var(--border);
+  }
+
+  .theme-surface {
+    background: var(--surface);
+    border-color: var(--border);
+  }
+
+  .theme-surface-soft {
+    background: var(--surface-soft);
+    border-color: var(--border);
+  }
+
+  .theme-surface-muted {
+    background: var(--surface-muted);
+    border-color: var(--border);
+  }
+
+  .theme-text-primary {
+    color: var(--text-primary);
+  }
+
+  .theme-text-secondary {
+    color: var(--text-secondary);
+  }
+
+  .theme-text-muted {
+    color: var(--text-muted);
+  }
+
+  .theme-text-subtle {
+    color: var(--text-subtle);
+  }
+
+  .theme-text-accent {
+    color: var(--accent);
+  }
+
+  .theme-brand-gradient {
+    background-image: linear-gradient(90deg, var(--brand-gradient-from), var(--brand-gradient-to));
+  }
+
+  .theme-badge {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+
+  .theme-icon-button {
+    color: var(--text-muted);
+  }
+
+  .theme-icon-button:hover {
+    background: color-mix(in srgb, var(--surface-soft) 70%, transparent);
+    color: var(--text-primary);
+  }
+
+  .theme-input {
+    background: var(--input-bg);
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+  }
+
+  .theme-input::placeholder {
+    color: var(--text-subtle);
+  }
+
+  .theme-input:focus {
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+
+  .btn-theme-primary {
+    background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+    color: white;
+    box-shadow: 0 10px 28px color-mix(in srgb, var(--accent-strong) 22%, transparent);
+  }
+
+  .btn-theme-primary:hover {
+    filter: brightness(1.04);
+  }
+
+  .btn-theme-secondary {
+    background: color-mix(in srgb, var(--surface-soft) 76%, transparent);
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+  }
+
+  .btn-theme-secondary:hover {
+    border-color: color-mix(in srgb, var(--accent) 30%, var(--border-strong));
+    background: color-mix(in srgb, var(--surface) 86%, transparent);
+  }
+
+  .theme-success {
+    background: var(--success-bg);
+    border-color: var(--success-border);
+    color: var(--success-text);
+  }
+
+  .theme-warning {
+    background: var(--warning-bg);
+    border-color: var(--warning-border);
+    color: var(--warning-text);
+  }
+
+  .theme-danger {
+    background: var(--danger-bg);
+    border-color: var(--danger-border);
+    color: var(--danger-text);
+  }
+
+  .theme-message-markdown {
+    color: inherit;
+  }
+
+  .theme-message-markdown p {
+    margin-bottom: 0.5rem;
+  }
+
+  .theme-message-markdown p:last-child {
+    margin-bottom: 0;
+  }
+
+  .theme-message-markdown strong {
+    color: var(--text-primary);
+  }
+
+  :root.theme-light .btn-theme-primary {
+    color: #f8fafc;
   }
 }

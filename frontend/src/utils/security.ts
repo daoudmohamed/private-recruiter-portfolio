@@ -11,7 +11,6 @@ const ALLOWED_MIME_TYPES = [
 
 const SESSION_KEY = 'kb_session'
 const MESSAGES_KEY = 'kb_messages'
-const API_KEY_KEY = 'kb_api_key'
 const MAX_PERSISTED_MESSAGES = 50
 
 export interface Message {
@@ -26,34 +25,22 @@ export interface ValidationResult {
   error: string | null
 }
 
-// --- API Key (sessionStorage) ---
-
-export function getApiKey(): string {
-  try {
-    return sessionStorage.getItem(API_KEY_KEY) || ''
-  } catch {
-    return ''
+export function validateEmail(email: string): ValidationResult {
+  if (!email || typeof email !== 'string') {
+    return { valid: false, error: 'L email est obligatoire.' }
   }
-}
 
-export function setApiKey(key: string): void {
-  try {
-    if (key) {
-      sessionStorage.setItem(API_KEY_KEY, key)
-    } else {
-      sessionStorage.removeItem(API_KEY_KEY)
-    }
-  } catch {
-    // sessionStorage not available
+  const trimmed = email.trim()
+  if (trimmed.length === 0) {
+    return { valid: false, error: 'L email est obligatoire.' }
   }
-}
 
-export function clearApiKey(): void {
-  try {
-    sessionStorage.removeItem(API_KEY_KEY)
-  } catch {
-    // sessionStorage not available
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailPattern.test(trimmed)) {
+    return { valid: false, error: 'Adresse email invalide.' }
   }
+
+  return { valid: true, error: null }
 }
 
 // --- Session persistence (sessionStorage) ---
@@ -95,6 +82,15 @@ export function persistMessages(messages: Message[]): void {
     sessionStorage.setItem(MESSAGES_KEY, JSON.stringify(trimmed))
   } catch {
     // sessionStorage not available or quota exceeded
+  }
+}
+
+export function clearPersistedConversation(): void {
+  try {
+    sessionStorage.removeItem(SESSION_KEY)
+    sessionStorage.removeItem(MESSAGES_KEY)
+  } catch {
+    // sessionStorage not available
   }
 }
 

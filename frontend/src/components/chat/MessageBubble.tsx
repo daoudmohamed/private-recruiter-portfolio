@@ -34,14 +34,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
           'max-w-[80%] p-4 rounded-2xl text-sm md:text-base leading-relaxed shadow-sm',
           isBot
             ? clsx(
-                'bg-slate-800/80 backdrop-blur-md text-slate-100 rounded-tl-none border border-slate-700/50',
-                message.isError && 'border-red-700/50 bg-red-900/30 text-red-300'
+                'theme-surface backdrop-blur-md theme-text-secondary rounded-tl-none border',
+                message.isError && 'theme-danger'
               )
             : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-tr-none shadow-blue-500/10'
         )}
       >
         {isBot ? (
-          <div className="prose prose-sm prose-invert max-w-none [&>p]:mb-2 [&>p:last-child]:mb-0">
+          <div className="theme-message-markdown max-w-none">
             <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
               {message.content || '...'}
             </ReactMarkdown>
@@ -52,8 +52,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
       </div>
 
       {!isBot && (
-        <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0 border border-slate-600">
-          <User className="w-5 h-5 text-slate-300" />
+        <div className="theme-surface-soft w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border">
+          <User className="w-5 h-5 theme-text-muted" />
         </div>
       )}
     </motion.div>

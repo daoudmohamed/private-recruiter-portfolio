@@ -4,7 +4,6 @@ import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor
 import org.springframework.ai.chat.memory.ChatMemory
 import org.springframework.ai.chat.model.ChatModel
-import org.springframework.ai.vectorstore.VectorStore
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
@@ -21,20 +20,14 @@ class AiConfig {
     @Value("classpath:prompts/system-prompt.st")
     private lateinit var systemPromptResource: Resource
 
-    @Value("\${mutuelle.rag.similarity-threshold:0.65}")
-    private var similarityThreshold: Double = 0.65
-
-    @Value("\${mutuelle.rag.top-k:5}")
-    private var topK: Int = 5
-
     /**
      * Creates the main ChatClient with memory advisor.
      * RAG retrieval is handled separately by the ChatService.
      */
     @Bean
     fun chatClient(
-        @Qualifier("openAiChatModel") chatModel: ChatModel,
-        vectorStore: VectorStore,
+        @Qualifier("openAiChatModel")
+        chatModel: ChatModel,
         chatMemory: ChatMemory
     ): ChatClient {
         val systemPrompt = systemPromptResource.inputStream.bufferedReader().readText()
@@ -52,14 +45,20 @@ class AiConfig {
      * Creates a lightweight ChatClient without RAG for quick operations like intent detection.
      */
     @Bean
-    fun lightweightChatClient(@Qualifier("openAiChatModel") chatModel: ChatModel): ChatClient {
+    fun lightweightChatClient(
+        @Qualifier("openAiChatModel")
+        chatModel: ChatModel
+    ): ChatClient {
         return ChatClient.builder(chatModel)
             .build()
     }
 
     @Bean
-    fun vectorStoreConfig(): VectorStoreConfig {
-        return VectorStoreConfig(topK, similarityThreshold)
+    fun vectorStoreConfig(knowledgeBaseProperties: KnowledgeBaseProperties): VectorStoreConfig {
+        return VectorStoreConfig(
+            topK = knowledgeBaseProperties.rag.topK,
+            similarityThreshold = knowledgeBaseProperties.rag.similarityThreshold
+        )
     }
 }
 

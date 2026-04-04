@@ -32,8 +32,10 @@ configMapGenerator:
   - name: mutuelle-config
     behavior: merge
     literals:
-      - db-host=postgres-staging
       - redis-host=redis-staging
       - qdrant-host=qdrant-staging
-      - rabbitmq-host=rabbitmq-staging
-      - jwt-issuer-uri=https://auth-staging.mutuelle.fr
+      - frontend-base-url=https://portfolio-staging.example.com
+      - frontend-origin=https://portfolio-staging.example.com
+      - recruiter-access-from-email=noreply-staging@example.com
+      - recruiter-access-reply-to=contact-staging@example.com
+      - recruiter-access-captcha-site-key=

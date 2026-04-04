@@ -10,7 +10,7 @@ import jakarta.annotation.PostConstruct
  */
 @Component
 class SystemPromptProvider(
-    @Value("classpath:prompts/system-prompt.st")
+    @param:Value("classpath:prompts/system-prompt.st")
     private val systemPromptResource: Resource
 ) {
     private lateinit var basePrompt: String

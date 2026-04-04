@@ -2,6 +2,9 @@ package com.knowledgebase.ai.memory
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.knowledgebase.config.KnowledgeBaseProperties
+import com.knowledgebase.config.RedisKeyspace
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.runBlocking
@@ -12,7 +15,6 @@ import org.springframework.ai.chat.messages.Message
 import org.springframework.ai.chat.messages.MessageType
 import org.springframework.ai.chat.messages.UserMessage
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.redis.core.ReactiveRedisTemplate
 import org.springframework.stereotype.Component
 import java.time.Duration
@@ -24,38 +26,44 @@ private val logger = KotlinLogging.logger {}
  */
 @Component
 class RedisChatMemory(
-    @Qualifier("reactiveStringRedisTemplate")
+    @param:Qualifier("reactiveStringRedisTemplate")
     private val redisTemplate: ReactiveRedisTemplate<String, String>,
     private val objectMapper: ObjectMapper,
-    @Value("\${knowledgebase.chat.max-history-messages:20}")
-    private val maxMessages: Int,
-    @Value("\${knowledgebase.chat.session-timeout-hours:24}")
-    private val sessionTimeoutHours: Long
+    private val knowledgeBaseProperties: KnowledgeBaseProperties
 ) : ChatMemory {
 
-    private val keyPrefix = "chat:memory:"
-    private val ttl = Duration.ofHours(sessionTimeoutHours)
+    private val keyPrefix = RedisKeyspace.CHAT_MEMORY_PREFIX
+    private val maxMessages = knowledgeBaseProperties.chat.maxHistoryMessages
+    private val ttl = Duration.ofHours(knowledgeBaseProperties.chat.sessionTimeoutHours)
+
+    /**
+     * Spring AI's ChatMemory contract is synchronous.
+     * Until the library exposes a suspend-friendly memory abstraction, we isolate the
+     * blocking bridge here and run the coroutine work on the IO dispatcher.
+     */
+    private fun <T> bridgeToSync(block: suspend () -> T): T =
+        runBlocking(Dispatchers.IO) { block() }
 
     override fun add(conversationId: String, messages: MutableList<Message>) {
-        runBlocking {
+        bridgeToSync {
             addAsync(conversationId, messages)
         }
     }
 
     override fun get(conversationId: String): MutableList<Message> {
-        return runBlocking {
+        return bridgeToSync {
             getAsync(conversationId, maxMessages)
         }
     }
 
     fun get(conversationId: String, lastN: Int): MutableList<Message> {
-        return runBlocking {
+        return bridgeToSync {
             getAsync(conversationId, lastN)
         }
     }
 
     override fun clear(conversationId: String) {
-        runBlocking {
+        bridgeToSync {
             clearAsync(conversationId)
         }
     }

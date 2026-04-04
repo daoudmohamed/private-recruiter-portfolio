@@ -1,7 +1,13 @@
 package com.knowledgebase.ai.rag
 
+import com.knowledgebase.config.QdrantProperties
+import com.knowledgebase.config.RedisKeyspace
+import io.qdrant.client.ConditionFactory
+import io.qdrant.client.QdrantClient
+import io.qdrant.client.grpc.Points
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.reactor.awaitSingle
 import mu.KotlinLogging
 import org.springframework.ai.document.Document
 import org.springframework.ai.reader.TextReader
@@ -9,9 +15,10 @@ import org.springframework.ai.reader.pdf.PagePdfDocumentReader
 import org.springframework.ai.reader.tika.TikaDocumentReader
 import org.springframework.ai.transformer.splitter.TokenTextSplitter
 import org.springframework.ai.vectorstore.VectorStore
-import org.springframework.core.io.ByteArrayResource
-import org.springframework.core.io.PathResource
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.Resource
+import org.springframework.data.redis.core.ReactiveRedisTemplate
 import org.springframework.stereotype.Service
 import java.nio.file.Files
 import java.nio.file.Path
@@ -28,7 +35,11 @@ private val logger = KotlinLogging.logger {}
  */
 @Service
 class DocumentIngestionService(
-    private val vectorStore: VectorStore
+    private val vectorStore: VectorStore,
+    @param:Qualifier("reactiveStringRedisTemplate")
+    private val redisTemplate: ReactiveRedisTemplate<String, String>,
+    private val qdrantClient: QdrantClient,
+    private val qdrantProperties: QdrantProperties
 ) {
     private val textSplitter = TokenTextSplitter.builder()
         .withMinChunkSizeChars(100)
@@ -77,7 +88,7 @@ class DocumentIngestionService(
             val timestamp = Instant.now().toString()
             val enrichedDocuments = documents.map { doc ->
                 Document(
-                    doc.text,
+                    doc.text ?: "",
                     doc.metadata.filterValues { it != null }.toMutableMap().apply {
                         put("source", filename)
                         put("type", extension)
@@ -93,6 +104,10 @@ class DocumentIngestionService(
             withContext(Dispatchers.IO) {
                 vectorStore.add(chunks)
             }
+
+            redisTemplate.opsForSet()
+                .add(RedisKeyspace.INGESTED_SOURCES_KEY, filename)
+                .awaitSingle()
 
             logger.info { "Successfully ingested $filename: ${chunks.size} chunks created" }
 
@@ -132,7 +147,7 @@ class DocumentIngestionService(
         logger.info { "Found ${files.size} files to ingest" }
 
         return files.map { file ->
-            ingestFile(file.name, PathResource(file))
+            ingestFile(file.name, FileSystemResource(file))
         }
     }
 
@@ -143,11 +158,23 @@ class DocumentIngestionService(
         logger.info { "Deleting documents from source: $filename" }
 
         return try {
-            // Note: VectorStore interface doesn't have a standard delete by metadata method
-            // This would need to be implemented based on the specific vector store
-            // For now, we'll return false indicating it's not implemented
-            logger.warn { "Delete by source not implemented for current vector store" }
-            false
+            val sourceFilter = Points.Filter.newBuilder()
+                .addMust(ConditionFactory.matchKeyword("source", filename))
+                .build()
+
+            withContext(Dispatchers.IO) {
+                qdrantClient.deleteAsync(qdrantProperties.collectionName, sourceFilter).get()
+            }
+
+            redisTemplate.opsForSet()
+                .remove(RedisKeyspace.INGESTED_SOURCES_KEY, filename)
+                .awaitSingle()
+
+            redisTemplate.opsForHash<String, String>()
+                .remove(RedisKeyspace.INGESTED_FILES_KEY, filename)
+                .awaitSingle()
+
+            true
         } catch (e: Exception) {
             logger.error(e) { "Failed to delete documents from source: $filename" }
             false
@@ -158,8 +185,16 @@ class DocumentIngestionService(
      * List all ingested sources (not implemented - would require vector store scan).
      */
     suspend fun listIngestedSources(): List<String> {
-        logger.warn { "List ingested sources not implemented for current vector store" }
-        return emptyList()
+        return try {
+            redisTemplate.opsForSet()
+                .members(RedisKeyspace.INGESTED_SOURCES_KEY)
+                .collectList()
+                .awaitSingle()
+                .sorted()
+        } catch (e: Exception) {
+            logger.error(e) { "Failed to list ingested sources" }
+            emptyList()
+        }
     }
 
     private fun readPdf(resource: Resource): List<Document> {

@@ -1,62 +1,50 @@
 # Knowledge Base Frontend
 
-Interface React pour tester l'application Knowledge Base RAG.
+Interface React/Vite pour consommer l'API RAG du projet.
 
-## Démarrage rapide
+## Démarrage
 
 ```bash
-# Installer les dépendances
 npm install
-
-# Lancer en développement
 npm run dev
-
-# Build pour la production
 npm run build
 ```
 
-L'app démarre sur `http://localhost:5173`
-
-## Features
-
-- 💬 Chat streaming (SSE) en temps réel
-- 📄 Upload de documents (PDF, TXT, MD)
-- 📁 Scanner automatique du dossier
-- 🔑 Support API Key optionnel
-- 💾 Historique des sessions
-
-## Architecture
-
-```
-src/
-├── App.jsx              # Main app
-├── components/
-│   ├── ChatWindow.jsx   # Chat UI
-│   ├── DocumentUpload.jsx # Upload
-│   ├── ChatWindow.css
-│   └── DocumentUpload.css
-└── App.css
-```
+Par défaut, l'application tourne sur `http://localhost:5173`.
 
 ## Configuration
 
-L'app se connecte par défaut à `http://localhost:8080/api/v1`
+Le frontend cible `VITE_API_BASE`, avec `/api/v1` comme valeur par défaut.
 
-Pour une autre URL, modifier dans App.jsx:
-```javascript
-const API_BASE = 'http://your-server:8080/api/v1'
+Exemple:
+
+```bash
+VITE_API_BASE=http://localhost:8080/api/v1
 ```
 
-## API Key
+## Fonctionnalités actuelles
 
-Pour utiliser une API Key:
-1. Cliquer sur ⚙️ Paramètres
-2. Entrer votre clé
-3. Elle est sauvegardée localement
+- Chat en streaming via SSE
+- Création et persistance locale d'une session de conversation
+- Saisie optionnelle d'une API key stockée en `sessionStorage`
+- Sections de présentation statiques autour du chat
 
-## Développement
+## Structure
 
-- Vite pour hot reload
-- React Hooks pour l'état
-- Fetch API pour les requêtes
-- CSS Grid/Flexbox pour le layout
+```text
+src/
+  App.tsx
+  components/
+    ChatWindow.tsx
+    ErrorBoundary.tsx
+    chat/
+    sections/
+  utils/
+    api.ts
+    security.ts
+```
+
+## Limites actuelles
+
+- L'upload de documents existe dans l'API frontend, mais aucun composant d'upload n'est encore exposé dans l'interface.
+- La clé API utilisateur est conservée côté navigateur pour la durée de l'onglet.

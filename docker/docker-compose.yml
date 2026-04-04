@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Application
   app:
@@ -10,13 +8,16 @@ services:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - QDRANT_HOST=qdrant
       - QDRANT_GRPC_PORT=6334
+      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-http://localhost:5173}
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:5173}
       - API_KEY=${API_KEY:-}
+      - ADMIN_API_KEY=${ADMIN_API_KEY:-}
+      - DOCUMENTS_FOLDER=/app/documents
     volumes:
       - ../documents:/app/documents
     depends_on:

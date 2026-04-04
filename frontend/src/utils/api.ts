@@ -11,6 +11,19 @@ export interface SessionResponse {
   id: string
 }
 
+export interface RecruiterAccessSessionResponse {
+  enabled: boolean
+  authenticated: boolean
+  requestInvitationEnabled: boolean
+  captchaSiteKey?: string
+  expiresAt?: string
+}
+
+export interface RequestRecruiterInvitationResponse {
+  accepted: boolean
+  message: string
+}
+
 export interface UploadResult {
   chunksCreated: number
   status?: string
@@ -20,22 +33,48 @@ export interface ScanResult {
   status?: string
 }
 
-function buildHeaders(apiKey: string): Record<string, string> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (apiKey) {
-    headers['X-API-Key'] = apiKey
+type ErrorBody = {
+  message?: string
+  code?: string
+}
+
+export class ApiError extends Error {
+  status: number
+  code?: string
+
+  constructor(message: string, status: number, code?: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.code = code
   }
-  return headers
+}
+
+function buildJsonHeaders(): Record<string, string> {
+  return { 'Content-Type': 'application/json' }
 }
 
 function errorMessageForStatus(status: number): string {
   switch (status) {
-    case 401: return 'Cle API invalide ou manquante.'
+    case 401: return 'Acces temporaire requis ou expire.'
     case 403: return 'Acces refuse.'
     case 413: return 'Le contenu envoye est trop volumineux.'
     case 429: return 'Trop de requetes. Veuillez patienter.'
     default:  return `Erreur serveur (${status}).`
   }
+}
+
+async function buildError(response: Response): Promise<Error> {
+  try {
+    const body = await response.clone().json() as ErrorBody
+    if (body?.message) {
+      return new ApiError(body.message, response.status, body.code)
+    }
+  } catch {
+    // Ignore non-JSON bodies.
+  }
+
+  return new ApiError(errorMessageForStatus(response.status), response.status)
 }
 
 export async function fetchWithTimeout(
@@ -51,6 +90,7 @@ export async function fetchWithTimeout(
   try {
     const response = await fetch(url, {
       ...options,
+      credentials: 'include',
       signal: controller.signal,
     })
     return response
@@ -98,70 +138,111 @@ export async function fetchWithRetry(
 
 // --- API functions ---
 
-export async function createSession(apiKey: string): Promise<SessionResponse> {
+export async function createSession(): Promise<SessionResponse> {
   const response = await fetchWithRetry(`${API_BASE}/sessions`, {
     method: 'POST',
-    headers: buildHeaders(apiKey),
+    headers: buildJsonHeaders(),
     body: JSON.stringify({}),
   })
 
   if (!response.ok) {
-    throw new Error(errorMessageForStatus(response.status))
+    throw await buildError(response)
   }
 
   return response.json()
 }
 
-export async function sendChatMessage(sessionId: string, message: string, apiKey: string): Promise<Response> {
+export async function sendChatMessage(sessionId: string, message: string): Promise<Response> {
   const response = await fetchWithTimeout(`${API_BASE}/chat`, {
     method: 'POST',
-    headers: buildHeaders(apiKey),
+    headers: buildJsonHeaders(),
     body: JSON.stringify({ sessionId, message }),
   }, STREAMING_TIMEOUT)
 
   if (!response.ok) {
-    throw new Error(errorMessageForStatus(response.status))
+    throw await buildError(response)
   }
 
   return response
 }
 
-export async function uploadDocument(file: File, apiKey: string): Promise<UploadResult> {
+export async function uploadDocument(file: File): Promise<UploadResult> {
   const formData = new FormData()
   formData.append('file', file)
 
-  const headers: Record<string, string> = {}
-  if (apiKey) {
-    headers['X-API-Key'] = apiKey
-  }
-
   const response = await fetchWithTimeout(`${API_BASE}/documents/upload`, {
     method: 'POST',
-    headers,
     body: formData,
   }, UPLOAD_TIMEOUT)
 
   if (!response.ok) {
-    throw new Error(errorMessageForStatus(response.status))
+    throw await buildError(response)
   }
 
   return response.json()
 }
 
-export async function scanDocuments(apiKey: string): Promise<ScanResult> {
-  const headers: Record<string, string> = {}
-  if (apiKey) {
-    headers['X-API-Key'] = apiKey
-  }
-
+export async function scanDocuments(): Promise<ScanResult> {
   const response = await fetchWithRetry(`${API_BASE}/documents/scan`, {
     method: 'POST',
-    headers,
   })
 
   if (!response.ok) {
-    throw new Error(errorMessageForStatus(response.status))
+    throw await buildError(response)
   }
 
   return response.json()
+}
+
+export async function getRecruiterAccessSession(): Promise<RecruiterAccessSessionResponse> {
+  const response = await fetchWithRetry(`${API_BASE}/recruiter-access/session`, {
+    method: 'GET',
+  })
+
+  if (!response.ok) {
+    throw await buildError(response)
+  }
+
+  return response.json()
+}
+
+export async function requestRecruiterInvitation(
+  email: string,
+  captchaToken?: string
+): Promise<RequestRecruiterInvitationResponse> {
+  const response = await fetchWithRetry(`${API_BASE}/recruiter-access/request-invitation`, {
+    method: 'POST',
+    headers: buildJsonHeaders(),
+    body: JSON.stringify({ email, captchaToken }),
+  })
+
+  if (!response.ok) {
+    throw await buildError(response)
+  }
+
+  return response.json()
+}
+
+export async function consumeRecruiterAccessToken(token: string): Promise<RecruiterAccessSessionResponse> {
+  const response = await fetchWithRetry(`${API_BASE}/recruiter-access/consume`, {
+    method: 'POST',
+    headers: buildJsonHeaders(),
+    body: JSON.stringify({ token }),
+  })
+
+  if (!response.ok) {
+    throw await buildError(response)
+  }
+
+  return response.json()
+}
+
+export async function logoutRecruiterAccess(): Promise<void> {
+  const response = await fetchWithRetry(`${API_BASE}/recruiter-access/logout`, {
+    method: 'POST',
+  })
+
+  if (!response.ok) {
+    throw await buildError(response)
+  }
 }

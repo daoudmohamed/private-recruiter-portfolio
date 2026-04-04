@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.knowledgebase.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -9,15 +11,12 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.http.codec.ServerCodecConfigurer
 import org.springframework.http.codec.json.Jackson2JsonDecoder
 import org.springframework.http.codec.json.Jackson2JsonEncoder
-import org.springframework.web.reactive.config.CorsRegistry
-import org.springframework.web.reactive.config.EnableWebFlux
 import org.springframework.web.reactive.config.WebFluxConfigurer
 
 /**
- * WebFlux configuration for the reactive web layer.
+ * Shared Jackson configuration for the reactive web layer.
  */
 @Configuration
-@EnableWebFlux
 class WebFluxConfig : WebFluxConfigurer {
 
     @Bean
@@ -33,15 +32,5 @@ class WebFluxConfig : WebFluxConfigurer {
         val objectMapper = objectMapper()
         configurer.defaultCodecs().jackson2JsonEncoder(Jackson2JsonEncoder(objectMapper))
         configurer.defaultCodecs().jackson2JsonDecoder(Jackson2JsonDecoder(objectMapper))
-        configurer.defaultCodecs().maxInMemorySize(16 * 1024 * 1024) // 16MB
-    }
-
-    override fun addCorsMappings(registry: CorsRegistry) {
-        registry.addMapping("/api/**")
-            .allowedOriginPatterns("*")
-            .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-            .allowedHeaders("*")
-            .allowCredentials(true)
-            .maxAge(3600)
     }
 }

@@ -57,9 +57,9 @@ configMapGenerator:
   - name: mutuelle-config
     behavior: merge
     literals:
-      - db-host=postgres-prod
       - redis-host=redis-prod
       - qdrant-host=qdrant-prod
-      - rabbitmq-host=rabbitmq-prod
-      - jwt-issuer-uri=https://auth.mutuelle.fr
-      - rate-limit-requests-per-minute=100
+      - frontend-base-url=https://portfolio.example.com
+      - frontend-origin=https://portfolio.example.com
+      - recruiter-access-from-email=noreply@example.com
+      - recruiter-access-reply-to=contact@example.com

@@ -54,6 +54,40 @@ data class IngestionStatusResponse(
     val status: String
 )
 
+data class CreateRecruiterInvitationRequest(
+    val email: String,
+    val expiresInHours: Long? = null
+)
+
+data class RequestRecruiterInvitationRequest(
+    val email: String,
+    val captchaToken: String? = null
+)
+
+data class RequestRecruiterInvitationResponse(
+    val accepted: Boolean,
+    val message: String
+)
+
+data class RecruiterInvitationResponse(
+    val invitationId: String,
+    val email: String,
+    val expiresAt: Instant,
+    val status: String
+)
+
+data class ConsumeRecruiterAccessRequest(
+    val token: String
+)
+
+data class RecruiterAccessSessionResponse(
+    val enabled: Boolean,
+    val authenticated: Boolean,
+    val requestInvitationEnabled: Boolean = false,
+    val captchaSiteKey: String? = null,
+    val expiresAt: Instant? = null
+)
+
 // Extension functions
 fun ConversationSession.toDto() = SessionResponse(
     id = id,

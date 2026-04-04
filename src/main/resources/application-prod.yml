@@ -23,3 +23,26 @@ logging:
     root: WARN
     com.knowledgebase: INFO
     org.springframework.ai: WARN
+
+knowledgebase:
+  recruiter-access:
+    enabled: true
+    request-invitation-enabled: true
+    secure-cookies: true
+    frontend-base-url: ${FRONTEND_BASE_URL}
+    token-secret: ${RECRUITER_ACCESS_TOKEN_SECRET}
+    captcha:
+      provider: RECAPTCHA
+      site-key: ${RECRUITER_ACCESS_CAPTCHA_SITE_KEY}
+      verify-enabled: true
+      recaptcha:
+        secret-key: ${RECRUITER_ACCESS_CAPTCHA_RECAPTCHA_SECRET_KEY}
+    email:
+      provider: BREVO
+      from-email: ${RECRUITER_ACCESS_FROM_EMAIL}
+      from-name: ${RECRUITER_ACCESS_FROM_NAME:Knowledge Base}
+      subject: ${RECRUITER_ACCESS_EMAIL_SUBJECT:Votre acces recruteur}
+      brevo:
+        api-key: ${BREVO_API_KEY}
+        template-id: ${BREVO_TEMPLATE_ID}
+        reply-to: ${RECRUITER_ACCESS_REPLY_TO:${RECRUITER_ACCESS_FROM_EMAIL}}

@@ -5,11 +5,6 @@ metadata:
   labels:
     app: mutuelle-rag-agent
 data:
-  # Database
-  db-host: "postgres-service"
-  db-port: "5432"
-  db-name: "mutuelle"
-
   # Redis
   redis-host: "redis-service"
   redis-port: "6379"
@@ -18,13 +13,20 @@ data:
   qdrant-host: "qdrant-service"
   qdrant-port: "6334"
 
-  # RabbitMQ
-  rabbitmq-host: "rabbitmq-service"
+  # Frontend integration
+  frontend-base-url: "https://portfolio.example.com"
+  frontend-origin: "https://portfolio.example.com"
 
-  # JWT
-  jwt-issuer-uri: "https://auth.mutuelle.fr"
+  # Recruiter-access email settings
+  recruiter-access-from-name: "Knowledge Base"
+  recruiter-access-from-email: "noreply@example.com"
+  recruiter-access-reply-to: "contact@example.com"
+  recruiter-access-email-subject: "Votre acces recruteur"
+  brevo-template-id: "1"
 
-  # Application settings
-  chat-max-history: "20"
-  session-timeout-hours: "24"
-  rate-limit-requests-per-minute: "100"
+  # Captcha
+  recruiter-access-captcha-provider: "RECAPTCHA"
+  recruiter-access-captcha-site-key: ""
+
+  # Documents
+  documents-folder: "/app/documents"

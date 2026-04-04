@@ -4,17 +4,11 @@ spring:
 
   # Spring AI - LLM Configuration
   ai:
-    anthropic:
-      api-key: ${ANTHROPIC_API_KEY}
-      chat:
-        options:
-          model: claude-sonnet-4-20250514
-          max-tokens: 4096
-          temperature: 0.7
-
-    # OpenAI for embeddings only
     openai:
       api-key: ${OPENAI_API_KEY}
+      chat:
+        options:
+          model: gpt-5-nano
       embedding:
         options:
           model: text-embedding-3-small
@@ -43,6 +37,8 @@ spring:
   # Jackson JSON Configuration
   jackson:
     default-property-inclusion: non_null
+  codec:
+    max-in-memory-size: 16MB
 
   # Disable autoconfiguration for removed components
   autoconfigure:
@@ -90,6 +86,68 @@ springdoc:
 knowledgebase:
   security:
     api-key: ${API_KEY:}
+    admin-api-key: ${ADMIN_API_KEY:${API_KEY:}}
+    public-paths:
+      - /actuator/health/**
+      - /actuator/info
+      - /api-docs/**
+      - /swagger-ui/**
+      - /swagger-ui.html
+      - /webjars/**
+      - /api/v1/recruiter-access/request-invitation
+      - /api/v1/recruiter-access/consume
+      - /api/v1/recruiter-access/session
+      - /api/v1/recruiter-access/logout
+    admin-paths:
+      - /api/v1/recruiter-access/invitations
+    cors:
+      allowed-origins:
+        - ${FRONTEND_ORIGIN:http://localhost:5173}
+        - http://localhost:5174
+        - http://localhost:4173
+        - http://localhost:3000
+        - http://127.0.0.1:5173
+        - http://127.0.0.1:5174
+        - http://127.0.0.1:4173
+      allowed-methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allowed-headers:
+        - "*"
+      allow-credentials: true
+      max-age-seconds: 3600
+  recruiter-access:
+    enabled: false
+    request-invitation-enabled: false
+    invitation-ttl-hours: 24
+    session-ttl-hours: 24
+    cookie-name: kb_recruiter_session
+    secure-cookies: false
+    frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
+    token-secret: ${RECRUITER_ACCESS_TOKEN_SECRET:}
+    captcha:
+      provider: ${RECRUITER_ACCESS_CAPTCHA_PROVIDER:NONE}
+      site-key: ${RECRUITER_ACCESS_CAPTCHA_SITE_KEY:}
+      verify-enabled: ${RECRUITER_ACCESS_CAPTCHA_VERIFY_ENABLED:true}
+      recaptcha:
+        secret-key: ${RECRUITER_ACCESS_CAPTCHA_RECAPTCHA_SECRET_KEY:}
+        verify-url: ${RECRUITER_ACCESS_CAPTCHA_RECAPTCHA_VERIFY_URL:https://www.google.com/recaptcha/api/siteverify}
+    rate-limit:
+      max-requests-per-ip: 5
+      max-requests-per-email: 3
+      window-minutes: 60
+    email:
+      provider: ${RECRUITER_ACCESS_EMAIL_PROVIDER:LOG}
+      from-email: ${RECRUITER_ACCESS_FROM_EMAIL:}
+      from-name: ${RECRUITER_ACCESS_FROM_NAME:Knowledge Base}
+      subject: ${RECRUITER_ACCESS_EMAIL_SUBJECT:Votre acces recruteur}
+      brevo:
+        api-key: ${BREVO_API_KEY:}
+        template-id: ${BREVO_TEMPLATE_ID:}
+        reply-to: ${RECRUITER_ACCESS_REPLY_TO:}
   chat:
     max-history-messages: 20
     session-timeout-hours: 24

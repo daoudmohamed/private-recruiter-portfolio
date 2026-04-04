@@ -9,14 +9,18 @@ const INITIAL_MESSAGE: Message = {
   id: 0,
   role: 'assistant',
   content:
-    "Bonjour ! Je suis l'assistant IA de **Mohamed Daoud**, Tech Lead Backend spécialisé en architectures microservices Java/Spring Boot en environnements bancaires et assurantiels.\n\nJe peux vous parler de son parcours chez Malakoff Humanis, AXA France et EquensWorldline, de ses compétences techniques (Spring Boot 3, Kubernetes, RabbitMQ, OAuth2…) ou de ses certifications AWS & Kubernetes.\n\nQue souhaitez-vous savoir ?",
+    "Je peux vous aider a verifier rapidement le profil de **Mohamed Daoud**.\n\nJe reponds de facon courte et factuelle sur son parcours, sa stack, ses contextes banque / assurance, ses responsabilites recentes et ses certifications.\n\nCommencez par une question precise ou utilisez une suggestion ci-dessous.",
 };
 
 const SUGGESTIONS = [
-  'Quel est son poste actuel et ses responsabilités ?',
-  'Quelles sont ses compétences en architecture microservices ?',
-  'Quelle est son expérience en environnements bancaires ?',
-  'Quelles certifications cloud possède-t-il ?',
+  'Quel est son poste actuel et ses responsabilites ?',
+  'Quelle est son experience en banque, assurance et paiements ?',
+  'Quel est son niveau sur Spring Boot et les microservices ?',
+  'Quelles certifications possede-t-il ?',
+  'Pourquoi ce profil est-il pertinent pour un poste de Tech Lead Backend ?',
+  'Peux-tu me resumer son parcours en 5 lignes ?',
+  'Quels points verifier avant un premier entretien ?',
+  'Quels sujets peut-il prendre en charge rapidement ?',
 ];
 
 interface Props {
@@ -59,24 +63,26 @@ function ChatWindow({ messages, isLoading, onSendMessage, onNewSession }: Props)
     }
   };
 
-  const showThinking = isLoading && (messages.length === 0 || messages[messages.length - 1]?.content === '');
+  const showThinking = isLoading;
 
   return (
-    <div className="flex flex-col h-[600px] w-full max-w-4xl mx-auto bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-slate-700/50 shadow-2xl overflow-hidden relative">
+    <div className="theme-panel flex flex-col h-[540px] sm:h-[560px] md:h-[600px] w-full max-w-4xl mx-auto rounded-3xl border shadow-2xl overflow-hidden relative backdrop-blur-xl">
       {/* Header */}
-      <div className="bg-slate-900/80 p-4 border-b border-slate-700/50 flex items-center justify-between z-10">
+      <div className="theme-panel-strong p-3 sm:p-4 border-b flex items-center justify-between z-10 gap-3" style={{ borderColor: 'var(--border)' }}>
         <div className="flex items-center gap-3">
           <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
           <div>
-            <h3 className="text-white font-semibold text-sm md:text-base flex items-center gap-2">
-              Assistant Virtuel <Sparkles className="w-4 h-4 text-cyan-400" />
+            <h3 className="theme-text-primary font-semibold text-sm md:text-base flex items-center gap-2">
+              Assistant de lecture <Sparkles className="w-4 h-4 text-cyan-400" />
             </h3>
-            <p className="text-slate-400 text-xs">En ligne | Répond instantanément</p>
+            <p className="theme-text-muted text-xs">
+              {isLoading ? 'En train de repondre...' : 'Questions precises, reponses courtes et factuelles'}
+            </p>
           </div>
         </div>
         <button
           onClick={onNewSession}
-          className="p-2 hover:bg-slate-800 rounded-full transition-colors text-slate-400 hover:text-white"
+          className="theme-icon-button p-2 rounded-full transition-colors"
           title="Nouvelle session"
         >
           <RefreshCw className="w-4 h-4" />
@@ -86,7 +92,7 @@ function ChatWindow({ messages, isLoading, onSendMessage, onNewSession }: Props)
       {/* Messages Area */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto overscroll-y-contain p-4 md:p-6"
+        className="flex-1 overflow-y-auto overscroll-y-contain p-3 sm:p-4 md:p-6"
       >
         {/* Initial greeting — always shown, not persisted */}
         <MessageBubble message={INITIAL_MESSAGE} />
@@ -103,7 +109,12 @@ function ChatWindow({ messages, isLoading, onSendMessage, onNewSession }: Props)
       </div>
 
       {/* Suggestions */}
-      <div className="px-4 pb-2 flex gap-2 overflow-x-auto">
+      <div className="px-3 sm:px-4 pt-1">
+        <div className="theme-text-subtle text-[11px] uppercase tracking-[0.14em] mb-2">
+          Questions utiles
+        </div>
+      </div>
+      <div className="px-3 sm:px-4 pb-2 flex gap-2 overflow-x-auto">
         <AnimatePresence>
           {!isLoading && messages.length < 10 &&
             SUGGESTIONS.map((suggestion, index) => (
@@ -114,7 +125,7 @@ function ChatWindow({ messages, isLoading, onSendMessage, onNewSession }: Props)
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ delay: index * 0.1 }}
                 onClick={() => handleSend(suggestion)}
-                className="whitespace-nowrap px-4 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs md:text-sm rounded-full border border-slate-700 transition-all hover:border-cyan-500/50"
+                className="theme-surface whitespace-nowrap px-4 py-2 theme-text-accent text-xs md:text-sm rounded-full border transition-all hover:border-cyan-500/50"
               >
                 {suggestion}
               </motion.button>
@@ -123,15 +134,20 @@ function ChatWindow({ messages, isLoading, onSendMessage, onNewSession }: Props)
       </div>
 
       {/* Input Area */}
-      <div className="p-4 bg-slate-900/80 border-t border-slate-700/50 z-10">
+      <div className="theme-panel-strong p-3 sm:p-4 border-t z-10" style={{ borderColor: 'var(--border)' }}>
+        {!isLoading && messages.length === 0 && (
+          <div className="theme-surface mb-3 rounded-2xl border px-4 py-3 text-xs theme-text-muted leading-relaxed">
+            Bon usage: demandez un resume, un contexte metier, un niveau sur une stack ou la pertinence du profil pour un type de poste.
+          </div>
+        )}
         <div className="relative flex items-center gap-2">
           <input
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Posez une question sur vos documents..."
-            className="w-full bg-slate-800/50 text-white placeholder-slate-400 rounded-xl pl-4 pr-12 py-3 border border-slate-700 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20 transition-all"
+            placeholder="Ex. Pourquoi ce profil est-il pertinent pour un poste backend senior ?"
+            className="theme-input w-full rounded-xl pl-4 pr-12 py-3 border focus:outline-none transition-all"
             disabled={isLoading}
           />
           <button
@@ -143,8 +159,11 @@ function ChatWindow({ messages, isLoading, onSendMessage, onNewSession }: Props)
           </button>
         </div>
         <div className="text-center mt-2">
-          <p className="text-[10px] text-slate-500">
-            L'IA peut parfois faire des erreurs. Vérifiez les informations importantes.
+          <p className="theme-text-subtle text-[10px]">
+            L assistant repond a partir du profil et des documents disponibles. Utilisez-le pour verifier un point precis, pas pour remplacer la lecture d ensemble.
+          </p>
+          <p className="theme-text-subtle text-[10px] mt-1">
+            Questions courtes recommandees pour obtenir un resume plus utile et moins couteux.
           </p>
         </div>
       </div>

@@ -1,34 +1,22 @@
 package com.knowledgebase.config
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.KotlinModule
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Primary
 import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory
 import org.springframework.data.redis.core.ReactiveRedisTemplate
-import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer
 import org.springframework.data.redis.serializer.RedisSerializationContext
 import org.springframework.data.redis.serializer.StringRedisSerializer
-import org.springframework.context.annotation.Primary
 
 /**
  * Configuration for Redis (cache and chat memory).
  */
 @Configuration
-class RedisConfig {
-
-    @Value("\${spring.data.redis.host:localhost}")
-    private lateinit var host: String
-
-    @Value("\${spring.data.redis.port:6379}")
-    private var port: Int = 6379
-
-    @Value("\${spring.data.redis.password:}")
-    private var password: String? = null
+class RedisConfig(
+    private val redisProperties: RedisProperties
+) {
 
     /**
      * Creates a reactive Redis connection factory.
@@ -36,9 +24,9 @@ class RedisConfig {
     @Bean
     @Primary
     fun reactiveRedisConnectionFactory(): ReactiveRedisConnectionFactory {
-        val config = RedisStandaloneConfiguration(host, port)
-        if (!password.isNullOrBlank()) {
-            config.setPassword(password)
+        val config = RedisStandaloneConfiguration(redisProperties.host, redisProperties.port)
+        if (redisProperties.password.isNotBlank()) {
+            config.setPassword(redisProperties.password)
         }
         return LettuceConnectionFactory(config)
     }
@@ -60,38 +48,5 @@ class RedisConfig {
             .build()
 
         return ReactiveRedisTemplate(connectionFactory, context)
-    }
-
-    /**
-     * Creates a reactive Redis template for JSON object operations.
-     */
-    @Bean
-    fun reactiveJsonRedisTemplate(
-        connectionFactory: ReactiveRedisConnectionFactory,
-        objectMapper: ObjectMapper
-    ): ReactiveRedisTemplate<String, Any> {
-        val keySerializer = StringRedisSerializer()
-        val valueSerializer = Jackson2JsonRedisSerializer(objectMapper, Any::class.java)
-
-        val context = RedisSerializationContext
-            .newSerializationContext<String, Any>(keySerializer)
-            .key(keySerializer)
-            .value(valueSerializer)
-            .hashKey(keySerializer)
-            .hashValue(valueSerializer)
-            .build()
-
-        return ReactiveRedisTemplate(connectionFactory, context)
-    }
-
-    /**
-     * Configures ObjectMapper for Redis serialization.
-     */
-    @Bean
-    fun redisObjectMapper(): ObjectMapper {
-        return ObjectMapper().apply {
-            registerModule(KotlinModule.Builder().build())
-            registerModule(JavaTimeModule())
-        }
     }
 }

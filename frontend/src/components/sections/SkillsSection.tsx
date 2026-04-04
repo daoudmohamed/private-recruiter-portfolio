@@ -7,19 +7,19 @@ const SkillCard = ({ title, items, icon: Icon, delay }: { title: string; items: 
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true }}
     transition={{ delay, duration: 0.5 }}
-    className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 p-6 rounded-2xl hover:border-cyan-500/30 transition-colors group"
+    className="theme-panel-soft backdrop-blur-sm border p-5 sm:p-6 rounded-2xl hover:border-cyan-500/30 transition-colors group"
   >
     <div className="flex items-center gap-3 mb-4">
-      <div className="p-2 bg-slate-800 rounded-lg group-hover:bg-cyan-500/20 group-hover:text-cyan-400 transition-colors text-slate-400">
+      <div className="theme-surface p-2 rounded-lg group-hover:bg-cyan-500/20 group-hover:text-cyan-400 transition-colors theme-text-muted border">
         <Icon className="w-5 h-5" />
       </div>
-      <h3 className="text-xl font-semibold text-slate-200">{title}</h3>
+      <h3 className="theme-text-secondary text-lg sm:text-xl font-semibold">{title}</h3>
     </div>
     <div className="flex flex-wrap gap-2">
       {items.map((item, idx) => (
         <span
           key={idx}
-          className="px-3 py-1 bg-slate-800/50 border border-slate-700 rounded-full text-sm text-slate-300 hover:text-white hover:border-cyan-500/50 transition-colors cursor-default"
+          className="theme-surface px-3 py-1 border rounded-full text-sm theme-text-secondary hover:border-cyan-500/50 transition-colors cursor-default"
         >
           {item}
         </span>
@@ -53,24 +53,24 @@ export const SkillsSection = () => {
   ];
 
   return (
-    <section className="py-20 px-4 w-full max-w-6xl mx-auto">
-      <div className="text-center mb-16">
+    <section className="py-16 md:py-20 px-4 w-full max-w-6xl mx-auto">
+      <div className="text-center mb-12 md:mb-16">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-3xl md:text-4xl font-bold text-white mb-4"
+          className="theme-text-primary text-3xl md:text-4xl font-bold mb-4"
         >
-          Arsenal Technique
+          Stack et points forts
         </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.1 }}
-          className="text-slate-400 max-w-2xl mx-auto"
+          className="theme-text-muted max-w-2xl mx-auto"
         >
-          Une expertise backend & cloud forgée sur 8 ans en environnements bancaires et assurantiels à forte criticité.
+          Une lecture rapide des technologies, pratiques d architecture et sujets sur lesquels Mohamed peut etre rapidement operationnel ou credible en entretien.
         </motion.p>
       </div>
 

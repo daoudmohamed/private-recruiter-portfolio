@@ -1,5 +1,6 @@
 package com.knowledgebase.api.handler
 
+import com.knowledgebase.application.service.RecruiterAccessException
 import mu.KotlinLogging
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -33,7 +34,8 @@ class GlobalExceptionHandler {
                 status = ex.statusCode.value(),
                 error = ex.statusCode.toString(),
                 message = ex.reason ?: "An error occurred",
-                path = exchange.request.path.value()
+                path = exchange.request.path.value(),
+                code = (ex as? RecruiterAccessException)?.code
             ))
     }
 
@@ -50,7 +52,8 @@ class GlobalExceptionHandler {
                 status = 401,
                 error = "Unauthorized",
                 message = "Authentication required",
-                path = exchange.request.path.value()
+                path = exchange.request.path.value(),
+                code = null
             ))
     }
 
@@ -67,7 +70,8 @@ class GlobalExceptionHandler {
                 status = 403,
                 error = "Forbidden",
                 message = "Access denied",
-                path = exchange.request.path.value()
+                path = exchange.request.path.value(),
+                code = null
             ))
     }
 
@@ -86,6 +90,7 @@ class GlobalExceptionHandler {
                 error = "Bad Request",
                 message = "Validation failed",
                 path = exchange.request.path.value(),
+                code = null,
                 details = errors
             ))
     }
@@ -103,7 +108,8 @@ class GlobalExceptionHandler {
                 status = 400,
                 error = "Bad Request",
                 message = ex.message ?: "Invalid argument",
-                path = exchange.request.path.value()
+                path = exchange.request.path.value(),
+                code = null
             ))
     }
 
@@ -120,7 +126,8 @@ class GlobalExceptionHandler {
                 status = 500,
                 error = "Internal Server Error",
                 message = "An unexpected error occurred",
-                path = exchange.request.path.value()
+                path = exchange.request.path.value(),
+                code = null
             ))
     }
 }
@@ -134,5 +141,6 @@ data class ErrorResponse(
     val error: String,
     val message: String,
     val path: String,
+    val code: String? = null,
     val details: Map<String, String>? = null
 )

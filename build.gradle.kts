@@ -31,6 +31,7 @@ repositories {
 }
 
 extra["springAiVersion"] = "2.0.0-M1"
+extra["testcontainersVersion"] = "1.21.3"
 
 dependencies {
     // Spring Boot WebFlux
@@ -44,10 +45,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
 
-    // Spring AI - Anthropic Claude (for chat)
-    implementation("org.springframework.ai:spring-ai-starter-model-anthropic")
-
-    // Spring AI - OpenAI (for embeddings)
+    // Spring AI - OpenAI (for chat and embeddings)
     implementation("org.springframework.ai:spring-ai-starter-model-openai")
 
     // Spring AI - Vector Store (Qdrant)
@@ -91,6 +89,7 @@ dependencies {
 dependencyManagement {
     imports {
         mavenBom("org.springframework.ai:spring-ai-bom:${property("springAiVersion")}")
+        mavenBom("org.testcontainers:testcontainers-bom:${property("testcontainersVersion")}")
     }
 }
 

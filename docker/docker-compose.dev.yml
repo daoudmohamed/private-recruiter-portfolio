@@ -1,5 +1,3 @@
-version: '3.8'
-
 # Development compose file - starts only infrastructure services
 # Usage: docker compose -f docker-compose.dev.yml up -d
 
