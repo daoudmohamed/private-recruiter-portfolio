@@ -61,8 +61,6 @@ class RecruiterAccessControllerHttpTest {
 
     @Test
     fun `consume should expose stable recruiter access error code`() {
-        val csrfToken = webTestClient.fetchCsrfToken()
-
         coEvery { recruiterInvitationService.consumeInvitation("used-token") } throws RecruiterAccessException(
             status = HttpStatus.BAD_REQUEST,
             reason = "Lien d'acces deja utilise",
@@ -71,8 +69,6 @@ class RecruiterAccessControllerHttpTest {
 
         webTestClient.post()
             .uri("/api/v1/recruiter-access/consume")
-            .cookie("XSRF-TOKEN", csrfToken)
-            .header("X-XSRF-TOKEN", csrfToken)
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue("""{"token":"used-token"}""")
             .exchange()
