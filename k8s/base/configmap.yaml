@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mutuelle-config
+  labels:
+    app: mutuelle-rag-agent
+data:
+  # Database
+  db-host: "postgres-service"
+  db-port: "5432"
+  db-name: "mutuelle"
+
+  # Redis
+  redis-host: "redis-service"
+  redis-port: "6379"
+
+  # Qdrant
+  qdrant-host: "qdrant-service"
+  qdrant-port: "6334"
+
+  # RabbitMQ
+  rabbitmq-host: "rabbitmq-service"
+
+  # JWT
+  jwt-issuer-uri: "https://auth.mutuelle.fr"
+
+  # Application settings
+  chat-max-history: "20"
+  session-timeout-hours: "24"
+  rate-limit-requests-per-minute: "100"

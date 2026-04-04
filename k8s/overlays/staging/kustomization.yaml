@@ -1,0 +1,39 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mutuelle-staging
+
+resources:
+  - ../../base
+
+nameSuffix: -staging
+
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+      name: mutuelle-rag-agent
+
+  - patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+      - op: replace
+        path: /spec/maxReplicas
+        value: 3
+    target:
+      kind: HorizontalPodAutoscaler
+      name: mutuelle-rag-agent
+
+configMapGenerator:
+  - name: mutuelle-config
+    behavior: merge
+    literals:
+      - db-host=postgres-staging
+      - redis-host=redis-staging
+      - qdrant-host=qdrant-staging
+      - rabbitmq-host=rabbitmq-staging
+      - jwt-issuer-uri=https://auth-staging.mutuelle.fr

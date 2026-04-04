@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mutuelle-rag-agent
+  labels:
+    app: mutuelle-rag-agent
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app: mutuelle-rag-agent
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mutuelle-rag-agent
+  labels:
+    app: mutuelle-rag-agent

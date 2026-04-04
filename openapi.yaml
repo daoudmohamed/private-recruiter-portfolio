@@ -1,0 +1,1898 @@
+openapi: 3.1.0
+info:
+  title: Mutuelle RAG Agent API
+  version: 1.0.0
+  description: |
+    API de l'agent conversationnel RAG pour l'assistance aux adhérents de mutuelle santé.
+
+    **Fonctionnalités principales:**
+    - Gestion de sessions de conversation contextuelles
+    - Chat avec streaming SSE pour réponses en temps réel
+    - Détection d'intention et routage intelligent
+    - Récupération RAG (FAQ, garanties, politiques)
+    - Escalade vers conseillers humains
+    - Ingestion de documents (dev uniquement)
+
+    **Cas d'usage métier:**
+    - Informations sur les contrats et garanties
+    - Suivi des remboursements
+    - Demandes de devis
+    - Gestion administrative (attestations, documents)
+    - Réclamations et litiges
+
+  contact:
+    name: Support API Mutuelle
+    email: api-support@mutuelle.fr
+  license:
+    name: Proprietary
+    url: https://mutuelle.fr/legal/api-license
+
+servers:
+  - url: https://api.mutuelle.fr/v1
+    description: Production
+  - url: https://api-staging.mutuelle.fr/v1
+    description: Staging
+  - url: http://localhost:8080/v1
+    description: Development
+
+tags:
+  - name: Sessions
+    description: Gestion du cycle de vie des sessions de conversation
+  - name: Chat
+    description: Endpoints de conversation avec l'agent RAG
+  - name: Adherent
+    description: Informations et contexte de l'adhérent authentifié
+  - name: Documents
+    description: Génération et récupération de documents
+  - name: Admin
+    description: Endpoints d'administration (profil dev uniquement)
+  - name: Ingestion
+    description: Ingestion de documents dans le vector store (dev uniquement)
+  - name: Monitoring
+    description: Endpoints de santé et observabilité
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ============================================================================
+  # MONITORING & HEALTH
+  # ============================================================================
+
+  /health:
+    get:
+      tags: [Monitoring]
+      summary: Health check de l'application
+      description: |
+        Vérifie l'état de santé de l'application et de ses dépendances.
+        **Pas d'authentification requise.**
+      operationId: getHealth
+      security: []
+      responses:
+        '200':
+          description: Service opérationnel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: UP
+                timestamp: '2024-01-25T10:30:00Z'
+                components:
+                  database:
+                    status: UP
+                    details:
+                      connectionPool: 10
+                  redis:
+                    status: UP
+                  qdrant:
+                    status: UP
+                    details:
+                      collections: 3
+                  rabbitmq:
+                    status: UP
+        '503':
+          description: Service dégradé ou indisponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /health/ready:
+    get:
+      tags: [Monitoring]
+      summary: Readiness probe
+      description: Indique si l'application est prête à recevoir du trafic
+      operationId: getReadiness
+      security: []
+      responses:
+        '200':
+          description: Application prête
+        '503':
+          description: Application non prête
+
+  /health/live:
+    get:
+      tags: [Monitoring]
+      summary: Liveness probe
+      description: Indique si l'application est en vie (pour Kubernetes)
+      operationId: getLiveness
+      security: []
+      responses:
+        '200':
+          description: Application vivante
+        '503':
+          description: Application morte
+
+  # ============================================================================
+  # SESSIONS DE CONVERSATION
+  # ============================================================================
+
+  /sessions:
+    post:
+      tags: [Sessions]
+      summary: Créer une nouvelle session de conversation
+      description: |
+        Initialise une session de conversation pour l'adhérent authentifié.
+        Une session regroupe l'historique des échanges et maintient le contexte.
+      operationId: createSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+            example:
+              metadata:
+                channel: web
+                userAgent: Mozilla/5.0
+                referrer: https://mutuelle.fr/espace-adherent
+      responses:
+        '201':
+          description: Session créée avec succès
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-Trace-Id:
+              $ref: '#/components/headers/X-Trace-Id'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationSession'
+              example:
+                sessionId: sess_01HKG7M2V3QN4R5S6T7U8V9W0X
+                adherentId: 550e8400-e29b-41d4-a716-446655440001
+                status: ACTIVE
+                startedAt: '2024-01-25T10:30:00Z'
+                lastActivityAt: '2024-01-25T10:30:00Z'
+                messageCount: 0
+                escalated: false
+                metadata:
+                  channel: web
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    get:
+      tags: [Sessions]
+      summary: Lister les sessions de l'adhérent
+      description: |
+        Récupère la liste des sessions de conversation de l'adhérent authentifié.
+        Supporte la pagination et le filtrage par statut.
+      operationId: listSessions
+      parameters:
+        - name: status
+          in: query
+          description: Filtrer par statut de session
+          schema:
+            $ref: '#/components/schemas/SessionStatus'
+        - name: page
+          in: query
+          description: Numéro de page (0-indexed)
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          description: Taille de la page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sort
+          in: query
+          description: Critère de tri
+          schema:
+            type: string
+            enum: [startedAt, lastActivityAt]
+            default: lastActivityAt
+        - name: direction
+          in: query
+          description: Direction du tri
+          schema:
+            type: string
+            enum: [ASC, DESC]
+            default: DESC
+      responses:
+        '200':
+          description: Liste des sessions
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-Trace-Id:
+              $ref: '#/components/headers/X-Trace-Id'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /sessions/{sessionId}:
+    get:
+      tags: [Sessions]
+      summary: Récupérer une session spécifique
+      description: Retourne les détails d'une session de conversation
+      operationId: getSession
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Détails de la session
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-Trace-Id:
+              $ref: '#/components/headers/X-Trace-Id'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationSession'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Sessions]
+      summary: Fermer une session
+      description: |
+        Ferme une session de conversation. L'historique est conservé mais
+        la session ne peut plus être utilisée pour de nouveaux messages.
+      operationId: closeSession
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '204':
+          description: Session fermée avec succès
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-Trace-Id:
+              $ref: '#/components/headers/X-Trace-Id'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /sessions/{sessionId}/history:
+    get:
+      tags: [Sessions]
+      summary: Récupérer l'historique de conversation
+      description: |
+        Retourne tous les messages échangés dans la session.
+        Supporte la pagination pour les longues conversations.
+      operationId: getSessionHistory
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Historique des messages
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-Trace-Id:
+              $ref: '#/components/headers/X-Trace-Id'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageHistoryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # CHAT - CONVERSATION AVEC L'AGENT
+  # ============================================================================
+
+  /chat/send-message:
+    post:
+      tags: [Chat]
+      summary: Envoyer un message à l'agent (streaming SSE)
+      description: |
+        Envoie un message à l'agent conversationnel et reçoit la réponse en streaming
+        via Server-Sent Events (SSE).
+
+        **Fonctionnalités:**
+        - Détection automatique de l'intention utilisateur
+        - Récupération RAG contextuelle (FAQ, garanties, politiques)
+        - Enrichissement avec les données adhérent
+        - Streaming de la réponse token par token
+        - Escalade automatique si nécessaire
+
+        **Intents détectés:**
+        - `CONTRAT`: Questions sur contrats, garanties, bénéficiaires
+        - `REMBOURSEMENT`: Suivi et historique des remboursements
+        - `DEVIS`: Demandes de devis et simulations
+        - `ADMINISTRATIF`: Changements administratifs, documents
+        - `RECLAMATION`: Réclamations et litiges
+        - `ESCALATION`: Demande de conseiller humain
+        - `GENERAL`: Informations générales
+      operationId: sendMessageStreaming
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatMessageRequest'
+            examples:
+              contrat_question:
+                summary: Question sur les garanties
+                value:
+                  sessionId: sess_01HKG7M2V3QN4R5S6T7U8V9W0X
+                  message: "Ma formule couvre-t-elle l'optique?"
+                  metadata:
+                    timestamp: '2024-01-25T10:35:00Z'
+              remboursement_status:
+                summary: Suivi de remboursement
+                value:
+                  sessionId: sess_01HKG7M2V3QN4R5S6T7U8V9W0X
+                  message: "Où en est mon remboursement du 15 janvier?"
+              escalation:
+                summary: Demande de conseiller
+                value:
+                  sessionId: sess_01HKG7M2V3QN4R5S6T7U8V9W0X
+                  message: "Je voudrais parler à un conseiller"
+      responses:
+        '200':
+          description: Flux SSE de la réponse de l'agent
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-Trace-Id:
+              $ref: '#/components/headers/X-Trace-Id'
+            Cache-Control:
+              schema:
+                type: string
+                example: no-cache
+            Connection:
+              schema:
+                type: string
+                example: keep-alive
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Stream d'événements SSE. Chaque événement contient un ChatChunk JSON.
+
+                  **Types d'événements:**
+                  - `content`: Fragment de texte de la réponse
+                  - `escalation`: Notification d'escalade vers un humain
+                  - `error`: Erreur durant le traitement
+                  - `done`: Signal de fin de réponse
+              examples:
+                normal_response:
+                  summary: Réponse normale avec streaming
+                  value: |
+                    event: content
+                    data: {"type":"CONTENT","content":"Oui, votre formule ","metadata":{}}
+
+                    event: content
+                    data: {"type":"CONTENT","content":"GOLD couvre l'optique ","metadata":{}}
+
+                    event: content
+                    data: {"type":"CONTENT","content":"à hauteur de 80% ","metadata":{}}
+
+                    event: content
+                    data: {"type":"CONTENT","content":"jusqu'à 150€ par an.","metadata":{}}
+
+                    event: done
+                    data: {"type":"DONE","content":"","metadata":{"intent":"CONTRAT","confidence":0.95}}
+
+                escalation_response:
+                  summary: Escalade vers conseiller
+                  value: |
+                    event: escalation
+                    data: {"type":"ESCALATION","content":"Je transmets votre demande à un conseiller qui vous contactera sous peu.","metadata":{"reason":"Intent: ESCALATION"}}
+
+                    event: done
+                    data: {"type":"DONE","content":"","metadata":{}}
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /chat/send-message/sync:
+    post:
+      tags: [Chat]
+      summary: Envoyer un message (mode synchrone)
+      description: |
+        Version synchrone du chat. Retourne la réponse complète en une seule requête.
+        **À privilégier pour les intégrations simples ou les tests.**
+      operationId: sendMessageSync
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatMessageRequest'
+      responses:
+        '200':
+          description: Réponse complète de l'agent
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-Trace-Id:
+              $ref: '#/components/headers/X-Trace-Id'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatMessageResponse'
+              example:
+                sessionId: sess_01HKG7M2V3QN4R5S6T7U8V9W0X
+                content: "Oui, votre formule GOLD couvre l'optique à hauteur de 80% jusqu'à 150€ par an."
+                intent: CONTRAT
+                escalated: false
+                metadata:
+                  confidence: 0.95
+                  retrievedDocuments: 2
+                  processingTimeMs: 1250
+                  sources:
+                    - type: faq
+                      id: faq_004
+                      title: "Couverture optique formule GOLD"
+                    - type: guarantee
+                      code: OPTIQUE_001
+                      name: "Optique Standard"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  # ============================================================================
+  # ADHERENT - CONTEXTE ET PROFIL
+  # ============================================================================
+
+  /adherent/profile:
+    get:
+      tags: [Adherent]
+      summary: Récupérer le profil de l'adhérent authentifié
+      description: |
+        Retourne les informations personnelles de l'adhérent connecté.
+        Utilisé pour contextualiser les réponses de l'agent.
+      operationId: getAdherentProfile
+      responses:
+        '200':
+          description: Profil de l'adhérent
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-Trace-Id:
+              $ref: '#/components/headers/X-Trace-Id'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdherentProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /adherent/contracts:
+    get:
+      tags: [Adherent]
+      summary: Lister les contrats de l'adhérent
+      description: Retourne tous les contrats (actifs et inactifs) de l'adhérent
+      operationId: getAdherentContracts
+      parameters:
+        - name: status
+          in: query
+          description: Filtrer par statut de contrat
+          schema:
+            type: string
+            enum: [ACTIVE, SUSPENDED, TERMINATED]
+      responses:
+        '200':
+          description: Liste des contrats
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-Trace-Id:
+              $ref: '#/components/headers/X-Trace-Id'
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - contracts
+                  - totalCount
+                properties:
+                  contracts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Contract'
+                  totalCount:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /adherent/reimbursements:
+    get:
+      tags: [Adherent]
+      summary: Historique des remboursements
+      description: |
+        Retourne l'historique des remboursements de l'adhérent.
+        Supporte le filtrage par période et statut.
+      operationId: getAdherentReimbursements
+      parameters:
+        - name: status
+          in: query
+          description: Filtrer par statut
+          schema:
+            type: string
+            enum: [PENDING, IN_PROGRESS, COMPLETED, REJECTED]
+        - name: fromDate
+          in: query
+          description: Date de début (ISO 8601)
+          schema:
+            type: string
+            format: date
+            example: '2024-01-01'
+        - name: toDate
+          in: query
+          description: Date de fin (ISO 8601)
+          schema:
+            type: string
+            format: date
+            example: '2024-01-31'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Liste des remboursements
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-Trace-Id:
+              $ref: '#/components/headers/X-Trace-Id'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReimbursementListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================================================
+  # DOCUMENTS
+  # ============================================================================
+
+  /documents/attestation:
+    post:
+      tags: [Documents]
+      summary: Demander une attestation de mutuelle
+      description: |
+        Génère une attestation de mutuelle pour l'adhérent authentifié.
+        Le document est généré de manière asynchrone et téléchargeable via l'endpoint /documents/{documentId}.
+      operationId: requestAttestation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+              properties:
+                type:
+                  type: string
+                  enum: [ATTESTATION_DROITS, ATTESTATION_TIERS_PAYANT, ATTESTATION_CMU]
+                  description: Type d'attestation demandée
+                contractId:
+                  type: string
+                  format: uuid
+                  description: ID du contrat (optionnel, utilise le contrat actif par défaut)
+              example:
+                type: ATTESTATION_DROITS
+      responses:
+        '202':
+          description: Demande acceptée, génération en cours
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-Trace-Id:
+              $ref: '#/components/headers/X-Trace-Id'
+            Location:
+              description: URL du document une fois généré
+              schema:
+                type: string
+                format: uri
+                example: /v1/documents/doc_01HKG8N3W4RP5Q6S7T8U9V0W1X
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - documentId
+                  - status
+                properties:
+                  documentId:
+                    type: string
+                    example: doc_01HKG8N3W4RP5Q6S7T8U9V0W1X
+                  status:
+                    type: string
+                    enum: [PENDING, GENERATING]
+                    example: GENERATING
+                  estimatedCompletionTime:
+                    type: string
+                    format: date-time
+                    example: '2024-01-25T10:35:30Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /documents/{documentId}:
+    get:
+      tags: [Documents]
+      summary: Télécharger un document
+      description: Télécharge un document généré (attestation, relevé, etc.)
+      operationId: downloadDocument
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          description: Identifiant unique du document
+          schema:
+            type: string
+            example: doc_01HKG8N3W4RP5Q6S7T8U9V0W1X
+      responses:
+        '200':
+          description: Document PDF
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-Trace-Id:
+              $ref: '#/components/headers/X-Trace-Id'
+            Content-Disposition:
+              schema:
+                type: string
+                example: attachment; filename="attestation_mutuelle_2024.pdf"
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Document en cours de génération
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: DOCUMENT_GENERATING
+                  message: Le document est en cours de génération
+                  details:
+                    status: GENERATING
+                    progress: 45
+                requestId: req_01HKG8N3W4RP5Q6S7T8U9V0W1X
+                timestamp: '2024-01-25T10:35:15Z'
+
+  # ============================================================================
+  # ADMIN - ENDPOINTS D'ADMINISTRATION (DEV UNIQUEMENT)
+  # ============================================================================
+
+  /admin/dev/auth/token:
+    post:
+      tags: [Admin]
+      summary: Générer un token JWT de test
+      description: |
+        **Endpoint de développement uniquement** - Génère un token JWT pour tester l'API.
+        Désactivé en production.
+      operationId: generateDevToken
+      security: []
+      x-dev-only: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - adherentId
+              properties:
+                adherentId:
+                  type: string
+                  format: uuid
+                  description: ID de l'adhérent
+                email:
+                  type: string
+                  format: email
+                name:
+                  type: string
+                expirationHours:
+                  type: integer
+                  minimum: 1
+                  maximum: 168
+                  default: 24
+                  description: Durée de validité du token en heures
+              example:
+                adherentId: 550e8400-e29b-41d4-a716-446655440001
+                email: jean.dupont@example.com
+                name: Jean Dupont
+                expirationHours: 24
+      responses:
+        '200':
+          description: Token généré avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+
+  /admin/dev/auth/token/quick:
+    get:
+      tags: [Admin]
+      summary: Générer un token rapide avec valeurs par défaut
+      description: |
+        **Endpoint de développement uniquement** - Génère rapidement un token avec un adhérent de test.
+      operationId: generateQuickDevToken
+      security: []
+      x-dev-only: true
+      parameters:
+        - name: adherentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+            default: 550e8400-e29b-41d4-a716-446655440001
+      responses:
+        '200':
+          description: Token généré
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+
+  # ============================================================================
+  # INGESTION - ENDPOINTS D'INJECTION DE DOCUMENTS (DEV UNIQUEMENT)
+  # ============================================================================
+
+  /ingestion/faq:
+    post:
+      tags: [Ingestion]
+      summary: Injecter des documents FAQ dans le vector store
+      description: |
+        **Endpoint de développement uniquement** - Ingère des FAQs dans Qdrant pour le RAG.
+        Les documents sont chunké, embedé et indexés automatiquement.
+      operationId: ingestFaq
+      security:
+        - BearerAuth: []
+      x-dev-only: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FaqIngestionRequest'
+            example:
+              faqs:
+                - id: faq_001
+                  question: "Comment modifier mon adresse?"
+                  answer: "Pour modifier votre adresse, connectez-vous à votre espace adhérent..."
+                  category: ADMINISTRATIF
+                  subcategory: "Modification de profil"
+                  keywords: ["adresse", "modification", "profil"]
+      responses:
+        '200':
+          description: Ingestion réussie
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-Trace-Id:
+              $ref: '#/components/headers/X-Trace-Id'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestionResponse'
+              example:
+                success: true
+                message: "Successfully ingested 15 FAQ documents"
+                documentsProcessed: 15
+                metadata:
+                  chunksCreated: 18
+                  embeddingsGenerated: 18
+                  vectorsIndexed: 18
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /ingestion/guarantees:
+    post:
+      tags: [Ingestion]
+      summary: Injecter des garanties dans le vector store
+      description: |
+        **Endpoint de développement uniquement** - Ingère des garanties dans Qdrant.
+      operationId: ingestGuarantees
+      security:
+        - BearerAuth: []
+      x-dev-only: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuaranteeIngestionRequest'
+      responses:
+        '200':
+          description: Ingestion réussie
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-Trace-Id:
+              $ref: '#/components/headers/X-Trace-Id'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /ingestion/policy:
+    post:
+      tags: [Ingestion]
+      summary: Injecter un document de politique dans le vector store
+      description: |
+        **Endpoint de développement uniquement** - Ingère des documents de politique (CGV, notices, etc.).
+        Les documents longs sont automatiquement chunkés.
+      operationId: ingestPolicy
+      security:
+        - BearerAuth: []
+      x-dev-only: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyIngestionRequest'
+      responses:
+        '200':
+          description: Ingestion réussie
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-Trace-Id:
+              $ref: '#/components/headers/X-Trace-Id'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+# ==============================================================================
+# COMPONENTS
+# ==============================================================================
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Token JWT contenant les claims:
+        - `adherent_id`: UUID de l'adhérent
+        - `email`: Email de l'adhérent
+        - `roles`: Liste des rôles (USER, ADMIN)
+        - `exp`: Date d'expiration
+
+  parameters:
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      description: Identifiant unique de la session de conversation
+      schema:
+        type: string
+        pattern: '^sess_[A-Z0-9]{26}$'
+        example: sess_01HKG7M2V3QN4R5S6T7U8V9W0X
+
+  headers:
+    X-Request-Id:
+      description: Identifiant unique de la requête pour traçabilité
+      schema:
+        type: string
+        format: uuid
+        example: req_01HKG8N3W4RP5Q6S7T8U9V0W1X
+
+    X-Trace-Id:
+      description: Identifiant de trace distribué (pour corrélation multi-services)
+      schema:
+        type: string
+        example: trace_4a8f2c9d1e3b7f6a
+
+  responses:
+    BadRequest:
+      description: Requête invalide (validation échouée)
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
+        X-Trace-Id:
+          $ref: '#/components/headers/X-Trace-Id'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: La requête contient des erreurs de validation
+              details:
+                field: message
+                reason: Le message ne peut pas être vide
+            requestId: req_01HKG8N3W4RP5Q6S7T8U9V0W1X
+            timestamp: '2024-01-25T10:35:00Z'
+
+    Unauthorized:
+      description: Non authentifié (token manquant ou invalide)
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
+        X-Trace-Id:
+          $ref: '#/components/headers/X-Trace-Id'
+        WWW-Authenticate:
+          schema:
+            type: string
+            example: Bearer realm="Mutuelle API"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTHENTICATION_REQUIRED
+              message: Token JWT manquant ou invalide
+            requestId: req_01HKG8N3W4RP5Q6S7T8U9V0W1X
+            timestamp: '2024-01-25T10:35:00Z'
+
+    Forbidden:
+      description: Accès interdit (permissions insuffisantes)
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
+        X-Trace-Id:
+          $ref: '#/components/headers/X-Trace-Id'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_PERMISSIONS
+              message: Vous n'avez pas les permissions pour accéder à cette ressource
+            requestId: req_01HKG8N3W4RP5Q6S7T8U9V0W1X
+            timestamp: '2024-01-25T10:35:00Z'
+
+    NotFound:
+      description: Ressource non trouvée
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
+        X-Trace-Id:
+          $ref: '#/components/headers/X-Trace-Id'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RESOURCE_NOT_FOUND
+              message: La session demandée n'existe pas
+              details:
+                resourceType: session
+                resourceId: sess_01HKG7M2V3QN4R5S6T7U8V9W0X
+            requestId: req_01HKG8N3W4RP5Q6S7T8U9V0W1X
+            timestamp: '2024-01-25T10:35:00Z'
+
+    RateLimitExceeded:
+      description: Limite de taux dépassée
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
+        X-Trace-Id:
+          $ref: '#/components/headers/X-Trace-Id'
+        X-RateLimit-Limit:
+          description: Nombre maximum de requêtes autorisées
+          schema:
+            type: integer
+            example: 100
+        X-RateLimit-Remaining:
+          description: Nombre de requêtes restantes
+          schema:
+            type: integer
+            example: 0
+        X-RateLimit-Reset:
+          description: Timestamp de réinitialisation du compteur
+          schema:
+            type: integer
+            format: int64
+            example: 1706181360
+        Retry-After:
+          description: Délai avant nouvelle tentative (en secondes)
+          schema:
+            type: integer
+            example: 60
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMIT_EXCEEDED
+              message: Limite de requêtes dépassée
+              details:
+                limit: 100
+                window: 60
+                retryAfter: 45
+            requestId: req_01HKG8N3W4RP5Q6S7T8U9V0W1X
+            timestamp: '2024-01-25T10:35:00Z'
+
+  schemas:
+    # ========================================================================
+    # MONITORING & HEALTH
+    # ========================================================================
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [UP, DOWN, DEGRADED]
+          description: État global du service
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp du health check
+        components:
+          type: object
+          description: État des composants individuels
+          additionalProperties:
+            type: object
+            required:
+              - status
+            properties:
+              status:
+                type: string
+                enum: [UP, DOWN]
+              details:
+                type: object
+                additionalProperties: true
+
+    # ========================================================================
+    # SESSION DE CONVERSATION
+    # ========================================================================
+
+    CreateSessionRequest:
+      type: object
+      properties:
+        metadata:
+          type: object
+          description: Métadonnées contextuelles de la session
+          additionalProperties: true
+          example:
+            channel: web
+            userAgent: Mozilla/5.0
+            referrer: https://mutuelle.fr/espace-adherent
+
+    ConversationSession:
+      type: object
+      required:
+        - sessionId
+        - adherentId
+        - status
+        - startedAt
+        - lastActivityAt
+        - messageCount
+        - escalated
+      properties:
+        sessionId:
+          type: string
+          description: Identifiant unique de la session
+          pattern: '^sess_[A-Z0-9]{26}$'
+          example: sess_01HKG7M2V3QN4R5S6T7U8V9W0X
+        adherentId:
+          type: string
+          format: uuid
+          description: UUID de l'adhérent
+        status:
+          $ref: '#/components/schemas/SessionStatus'
+        startedAt:
+          type: string
+          format: date-time
+          description: Date de création de la session
+        lastActivityAt:
+          type: string
+          format: date-time
+          description: Date de dernière activité
+        messageCount:
+          type: integer
+          minimum: 0
+          description: Nombre de messages échangés
+        currentIntent:
+          $ref: '#/components/schemas/Intent'
+        escalated:
+          type: boolean
+          description: Indique si la session a été escaladée
+        escalationReason:
+          type: string
+          nullable: true
+          description: Raison de l'escalade
+        escalatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Date d'escalade
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Métadonnées personnalisées
+
+    SessionStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - IDLE
+        - ESCALATED
+        - CLOSED
+      description: |
+        État de la session:
+        - `ACTIVE`: Session active avec échanges récents
+        - `IDLE`: Session inactive depuis un certain temps
+        - `ESCALATED`: Session transférée à un conseiller humain
+        - `CLOSED`: Session fermée définitivement
+
+    SessionListResponse:
+      type: object
+      required:
+        - sessions
+        - page
+        - totalElements
+        - totalPages
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationSession'
+        page:
+          type: integer
+          description: Numéro de page actuelle (0-indexed)
+        totalElements:
+          type: integer
+          description: Nombre total d'éléments
+        totalPages:
+          type: integer
+          description: Nombre total de pages
+        size:
+          type: integer
+          description: Taille de la page
+
+    # ========================================================================
+    # CHAT ET MESSAGES
+    # ========================================================================
+
+    ChatMessageRequest:
+      type: object
+      required:
+        - sessionId
+        - message
+      properties:
+        sessionId:
+          type: string
+          description: ID de la session de conversation
+          pattern: '^sess_[A-Z0-9]{26}$'
+        message:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: Message de l'utilisateur
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Métadonnées additionnelles (timestamp, canal, etc.)
+
+    ChatMessageResponse:
+      type: object
+      required:
+        - sessionId
+        - content
+        - escalated
+      properties:
+        sessionId:
+          type: string
+          description: ID de la session
+        content:
+          type: string
+          description: Réponse complète de l'agent
+        intent:
+          $ref: '#/components/schemas/Intent'
+        escalated:
+          type: boolean
+          description: Indique si la conversation a été escaladée
+        metadata:
+          type: object
+          description: Métadonnées de la réponse
+          properties:
+            confidence:
+              type: number
+              format: float
+              minimum: 0
+              maximum: 1
+              description: Score de confiance de la détection d'intention
+            retrievedDocuments:
+              type: integer
+              description: Nombre de documents RAG récupérés
+            processingTimeMs:
+              type: integer
+              description: Temps de traitement en millisecondes
+            sources:
+              type: array
+              description: Sources utilisées pour générer la réponse
+              items:
+                $ref: '#/components/schemas/DocumentSource'
+
+    ChatChunk:
+      type: object
+      required:
+        - type
+        - content
+      properties:
+        type:
+          $ref: '#/components/schemas/ChunkType'
+        content:
+          type: string
+          description: Contenu du chunk (texte, message d'erreur, etc.)
+        metadata:
+          type: object
+          additionalProperties: true
+
+    ChunkType:
+      type: string
+      enum:
+        - CONTENT
+        - ESCALATION
+        - ERROR
+        - DONE
+      description: |
+        Type de chunk SSE:
+        - `CONTENT`: Fragment de texte de la réponse
+        - `ESCALATION`: Notification d'escalade vers conseiller
+        - `ERROR`: Erreur durant le traitement
+        - `DONE`: Signal de fin de stream
+
+    Intent:
+      type: string
+      enum:
+        - CONTRAT
+        - REMBOURSEMENT
+        - DEVIS
+        - ADMINISTRATIF
+        - RECLAMATION
+        - ESCALATION
+        - GENERAL
+      description: |
+        Intention détectée dans le message utilisateur:
+        - `CONTRAT`: Questions sur contrats, garanties, bénéficiaires
+        - `REMBOURSEMENT`: Suivi et historique des remboursements
+        - `DEVIS`: Demandes de devis et simulations
+        - `ADMINISTRATIF`: Modifications admin, documents
+        - `RECLAMATION`: Réclamations et litiges
+        - `ESCALATION`: Demande de conseiller humain
+        - `GENERAL`: Informations générales (FAQ)
+
+    DocumentSource:
+      type: object
+      description: Référence à un document source utilisé dans la réponse
+      required:
+        - type
+        - id
+      properties:
+        type:
+          type: string
+          enum: [faq, guarantee, policy]
+          description: Type de document
+        id:
+          type: string
+          description: Identifiant du document
+        title:
+          type: string
+          description: Titre ou nom du document
+        code:
+          type: string
+          description: Code du document (pour les garanties)
+        relevanceScore:
+          type: number
+          format: float
+          description: Score de pertinence (0-1)
+
+    MessageHistoryResponse:
+      type: object
+      required:
+        - messages
+        - page
+        - totalElements
+        - totalPages
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatHistoryMessage'
+        page:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+        size:
+          type: integer
+
+    ChatHistoryMessage:
+      type: object
+      required:
+        - messageId
+        - sessionId
+        - role
+        - content
+        - timestamp
+      properties:
+        messageId:
+          type: string
+          description: ID unique du message
+        sessionId:
+          type: string
+          description: ID de la session
+        role:
+          $ref: '#/components/schemas/MessageRole'
+        content:
+          type: string
+          description: Contenu du message
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp du message
+        metadata:
+          type: object
+          additionalProperties: true
+
+    MessageRole:
+      type: string
+      enum:
+        - USER
+        - ASSISTANT
+        - SYSTEM
+      description: |
+        Rôle de l'émetteur du message:
+        - `USER`: Message de l'utilisateur
+        - `ASSISTANT`: Réponse de l'agent IA
+        - `SYSTEM`: Message système (notifications, escalades)
+
+    # ========================================================================
+    # ADHERENT ET CONTEXTE
+    # ========================================================================
+
+    AdherentProfile:
+      type: object
+      required:
+        - adherentId
+        - numeroAdherent
+        - firstName
+        - lastName
+        - email
+      properties:
+        adherentId:
+          type: string
+          format: uuid
+        numeroAdherent:
+          type: string
+          description: Numéro adhérent unique
+          example: ADH202400123
+        firstName:
+          type: string
+          example: Jean
+        lastName:
+          type: string
+          example: Dupont
+        email:
+          type: string
+          format: email
+          example: jean.dupont@example.com
+        phone:
+          type: string
+          nullable: true
+          example: "+33612345678"
+        dateOfBirth:
+          type: string
+          format: date
+          example: '1985-06-15'
+        address:
+          $ref: '#/components/schemas/Address'
+
+    Address:
+      type: object
+      properties:
+        street:
+          type: string
+          example: 12 rue de la Paix
+        city:
+          type: string
+          example: Paris
+        postalCode:
+          type: string
+          example: '75001'
+        country:
+          type: string
+          example: France
+
+    Contract:
+      type: object
+      required:
+        - contractId
+        - contractNumber
+        - type
+        - status
+        - startDate
+      properties:
+        contractId:
+          type: string
+          format: uuid
+        contractNumber:
+          type: string
+          example: CTR-2024-00123
+        type:
+          type: string
+          enum: [INDIVIDUAL, FAMILY, COUPLE]
+          description: Type de contrat
+        status:
+          type: string
+          enum: [ACTIVE, SUSPENDED, TERMINATED]
+        startDate:
+          type: string
+          format: date
+          description: Date de début du contrat
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: Date de fin (null si actif)
+        monthlyPremium:
+          type: number
+          format: decimal
+          description: Cotisation mensuelle en euros
+          example: 85.50
+        formula:
+          type: string
+          example: GOLD
+          description: Formule souscrite
+        guarantees:
+          type: array
+          items:
+            $ref: '#/components/schemas/Guarantee'
+
+    Guarantee:
+      type: object
+      required:
+        - code
+        - name
+        - category
+        - coveragePercentage
+      properties:
+        code:
+          type: string
+          example: OPTIQUE_001
+        name:
+          type: string
+          example: Optique Standard
+        category:
+          type: string
+          enum: [OPTIQUE, DENTAIRE, HOSPITALISATION, PHARMACIE, MEDICAL, PROTHESE]
+        description:
+          type: string
+          example: Prise en charge des lunettes et lentilles de contact
+        coveragePercentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Pourcentage de remboursement
+        ceiling:
+          type: number
+          format: decimal
+          nullable: true
+          description: Plafond annuel en euros (null = sans plafond)
+        waitingPeriodDays:
+          type: integer
+          minimum: 0
+          description: Délai de carence en jours
+        frequency:
+          type: string
+          nullable: true
+          example: "1 an"
+          description: Fréquence de renouvellement
+
+    ReimbursementListResponse:
+      type: object
+      required:
+        - reimbursements
+        - page
+        - totalElements
+        - totalPages
+      properties:
+        reimbursements:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reimbursement'
+        page:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+        size:
+          type: integer
+
+    Reimbursement:
+      type: object
+      required:
+        - reimbursementId
+        - adherentId
+        - status
+        - careDate
+        - totalAmount
+      properties:
+        reimbursementId:
+          type: string
+          format: uuid
+        adherentId:
+          type: string
+          format: uuid
+        contractId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PENDING, IN_PROGRESS, COMPLETED, REJECTED]
+        careDate:
+          type: string
+          format: date
+          description: Date des soins
+        submittedAt:
+          type: string
+          format: date-time
+          description: Date de soumission de la demande
+        processedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Date de traitement
+        totalAmount:
+          type: number
+          format: decimal
+          description: Montant total des frais en euros
+        secuAmount:
+          type: number
+          format: decimal
+          description: Part Sécurité Sociale
+        mutuelleAmount:
+          type: number
+          format: decimal
+          description: Part Mutuelle
+        remainingAmount:
+          type: number
+          format: decimal
+          description: Reste à charge
+        category:
+          type: string
+          example: OPTIQUE
+        description:
+          type: string
+          example: Lunettes correctrices
+
+    # ========================================================================
+    # INGESTION (DEV)
+    # ========================================================================
+
+    FaqIngestionRequest:
+      type: object
+      required:
+        - faqs
+      properties:
+        faqs:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/FaqItem'
+
+    FaqItem:
+      type: object
+      required:
+        - id
+        - question
+        - answer
+        - category
+      properties:
+        id:
+          type: string
+          description: Identifiant unique de la FAQ
+          example: faq_001
+        question:
+          type: string
+          minLength: 1
+          example: "Comment modifier mon adresse?"
+        answer:
+          type: string
+          minLength: 1
+          example: "Pour modifier votre adresse..."
+        category:
+          $ref: '#/components/schemas/Intent'
+        subcategory:
+          type: string
+          nullable: true
+          example: "Modification de profil"
+        keywords:
+          type: array
+          items:
+            type: string
+          example: ["adresse", "modification", "profil"]
+
+    GuaranteeIngestionRequest:
+      type: object
+      required:
+        - guarantees
+      properties:
+        guarantees:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/GuaranteeItem'
+
+    GuaranteeItem:
+      type: object
+      required:
+        - code
+        - name
+        - category
+        - description
+        - coveragePercentage
+      properties:
+        code:
+          type: string
+          example: OPTIQUE_001
+        name:
+          type: string
+          example: Optique Standard
+        category:
+          type: string
+          example: OPTIQUE
+        description:
+          type: string
+          example: Prise en charge des lunettes et lentilles
+        coveragePercentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+        ceiling:
+          type: number
+          format: decimal
+          nullable: true
+        waitingPeriodDays:
+          type: integer
+          minimum: 0
+          default: 0
+        frequency:
+          type: string
+          nullable: true
+
+    PolicyIngestionRequest:
+      type: object
+      required:
+        - title
+        - content
+        - docType
+        - version
+      properties:
+        title:
+          type: string
+          example: "Conditions Générales de Vente 2024"
+        content:
+          type: string
+          minLength: 1
+          description: Contenu textuel complet du document
+        docType:
+          type: string
+          example: CGV
+          description: Type de document (CGV, NOTICE, etc.)
+        version:
+          type: string
+          example: "2024"
+          description: Version du document
+        formulaCode:
+          type: string
+          nullable: true
+          example: GOLD
+          description: Code formule associée (null = tous)
+
+    IngestionResponse:
+      type: object
+      required:
+        - success
+        - message
+        - documentsProcessed
+      properties:
+        success:
+          type: boolean
+          description: Indique si l'ingestion a réussi
+        message:
+          type: string
+          example: "Successfully ingested 15 FAQ documents"
+        documentsProcessed:
+          type: integer
+          description: Nombre de documents traités
+        metadata:
+          type: object
+          description: Métadonnées d'ingestion
+          properties:
+            chunksCreated:
+              type: integer
+              description: Nombre de chunks créés
+            embeddingsGenerated:
+              type: integer
+              description: Nombre d'embeddings générés
+            vectorsIndexed:
+              type: integer
+              description: Nombre de vecteurs indexés
+
+    # ========================================================================
+    # ADMIN
+    # ========================================================================
+
+    TokenResponse:
+      type: object
+      required:
+        - accessToken
+        - tokenType
+        - expiresIn
+        - adherentId
+      properties:
+        accessToken:
+          type: string
+          description: Token JWT
+          example: eyJhbGciOiJIUzM4NCIsInR5cCI6IkpXVCJ9...
+        tokenType:
+          type: string
+          example: Bearer
+        expiresIn:
+          type: integer
+          description: Durée de validité en secondes
+          example: 86400
+        adherentId:
+          type: string
+          format: uuid
+          description: ID de l'adhérent associé au token
+
+    # ========================================================================
+    # ERREURS
+    # ========================================================================
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - requestId
+        - timestamp
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorDetail'
+        requestId:
+          type: string
+          description: ID de la requête pour traçabilité
+          example: req_01HKG8N3W4RP5Q6S7T8U9V0W1X
+        traceId:
+          type: string
+          description: ID de trace distribué
+          example: trace_4a8f2c9d1e3b7f6a
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp de l'erreur
+
+    ErrorDetail:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Code d'erreur machine-readable
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          description: Message d'erreur human-readable
+          example: La requête contient des erreurs de validation
+        details:
+          type: object
+          additionalProperties: true
+          description: Détails additionnels sur l'erreur

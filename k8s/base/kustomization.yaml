@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mutuelle
+
+resources:
+  - namespace.yaml
+  - deployment.yaml
+  - service.yaml
+  - configmap.yaml
+  - hpa.yaml
+  - pdb.yaml
+
+commonLabels:
+  app: mutuelle-rag-agent
+  app.kubernetes.io/name: mutuelle-rag-agent
+  app.kubernetes.io/component: backend
