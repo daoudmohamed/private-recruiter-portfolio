@@ -53,6 +53,20 @@ patches:
       kind: PodDisruptionBudget
       name: mutuelle-rag-agent
 
+  - patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: portfolio.example.com
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: portfolio.example.com
+      - op: replace
+        path: /spec/tls/0/secretName
+        value: portfolio-example-com-tls
+    target:
+      kind: Ingress
+      name: mutuelle-rag-agent
+
 configMapGenerator:
   - name: mutuelle-config
     behavior: merge

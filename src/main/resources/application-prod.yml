@@ -4,10 +4,12 @@ server:
     include-stacktrace: never
 
 management:
+  server:
+    port: 9090
   endpoints:
     web:
       exposure:
-        include: health,metrics
+        include: health,metrics,prometheus
   endpoint:
     health:
       show-details: when-authorized

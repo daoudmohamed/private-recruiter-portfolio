@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "private-recruiter-portfolio.fullname" . }}-config
+  labels:
+    {{- include "private-recruiter-portfolio.labels" . | nindent 4 }}
+data:
+  redis-host: {{ .Values.redis.host | quote }}
+  redis-port: {{ .Values.redis.port | quote }}
+  qdrant-host: {{ .Values.qdrant.host | quote }}
+  qdrant-port: {{ .Values.qdrant.grpcPort | quote }}
+  frontend-base-url: {{ .Values.frontend.baseUrl | quote }}
+  frontend-origin: {{ .Values.frontend.origin | quote }}
+  recruiter-access-from-name: {{ .Values.recruiterAccess.email.fromName | quote }}
+  recruiter-access-from-email: {{ .Values.recruiterAccess.email.fromEmail | quote }}
+  recruiter-access-reply-to: {{ .Values.recruiterAccess.email.replyTo | quote }}
+  recruiter-access-email-subject: {{ .Values.recruiterAccess.email.subject | quote }}
+  brevo-template-id: {{ .Values.recruiterAccess.email.brevoTemplateId | quote }}
+  recruiter-access-captcha-provider: {{ .Values.recruiterAccess.captcha.provider | quote }}
+  recruiter-access-captcha-site-key: {{ .Values.recruiterAccess.captcha.siteKey | quote }}
+  documents-folder: {{ .Values.documents.folder | quote }}

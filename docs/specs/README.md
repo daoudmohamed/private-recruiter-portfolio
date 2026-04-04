@@ -10,6 +10,11 @@ Documents are split by responsibility:
 - `non-functional-spec.md`: security, reliability, observability, performance, compliance
 - `delivery-trajectory.md`: phased path from current state to a stable production-ready release
 - `audit-preparation.md`: code and runtime review checklist against the MVP baseline
+- `github-actions-cicd.md`: CI/CD contract, GitHub Actions workflows, required environment secrets
+- `sre-infra-audit.md`: SRE assessment of the current infrastructure posture and production gaps
+- `sre-operations-guide.md`: recommended operating model for self-hosted production and incident handling
+- `stateful-services-contract.md`: operational contract for Redis and Qdrant in production
+- `helm-production-guide.md`: Helm chart usage and mapping from the production-k3s baseline
 
 These documents are intended to become the reference for future implementation work.
 

@@ -1,38 +1,34 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mutuelle-rag-agent
+  name: {{ include "private-recruiter-portfolio.fullname" . }}
   labels:
-    app: mutuelle-rag-agent
+    {{- include "private-recruiter-portfolio.labels" . | nindent 4 }}
 spec:
-  replicas: 2
+  replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: mutuelle-rag-agent
+      {{- include "private-recruiter-portfolio.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app: mutuelle-rag-agent
+        {{- include "private-recruiter-portfolio.selectorLabels" . | nindent 8 }}
       annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/path: /actuator/prometheus
-        prometheus.io/port: "9090"
+        {{- toYaml .Values.podAnnotations | nindent 8 }}
     spec:
-      serviceAccountName: mutuelle-rag-agent
+      serviceAccountName: {{ include "private-recruiter-portfolio.serviceAccountName" . }}
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        fsGroup: 1000
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
-        - name: mutuelle-rag-agent
-          image: mutuelle-rag-agent:latest
-          imagePullPolicy: Always
+        - name: private-recruiter-portfolio
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: {{ .Values.service.targetPort }}
               protocol: TCP
             - name: management
-              containerPort: 9090
+              containerPort: {{ .Values.management.port }}
               protocol: TCP
           env:
             - name: SPRING_PROFILES_ACTIVE
@@ -40,122 +36,117 @@ spec:
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: mutuelle-secrets
+                  name: {{ .Values.secrets.existingSecretName }}
                   key: openai-api-key
             - name: REDIS_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: mutuelle-config
+                  name: {{ include "private-recruiter-portfolio.fullname" . }}-config
                   key: redis-host
             - name: REDIS_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: mutuelle-config
+                  name: {{ include "private-recruiter-portfolio.fullname" . }}-config
                   key: redis-port
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: mutuelle-secrets
+                  name: {{ .Values.secrets.existingSecretName }}
                   key: redis-password
                   optional: true
             - name: QDRANT_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: mutuelle-config
+                  name: {{ include "private-recruiter-portfolio.fullname" . }}-config
                   key: qdrant-host
             - name: QDRANT_GRPC_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: mutuelle-config
+                  name: {{ include "private-recruiter-portfolio.fullname" . }}-config
                   key: qdrant-port
             - name: QDRANT_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: mutuelle-secrets
+                  name: {{ .Values.secrets.existingSecretName }}
                   key: qdrant-api-key
                   optional: true
             - name: FRONTEND_BASE_URL
               valueFrom:
                 configMapKeyRef:
-                  name: mutuelle-config
+                  name: {{ include "private-recruiter-portfolio.fullname" . }}-config
                   key: frontend-base-url
             - name: FRONTEND_ORIGIN
               valueFrom:
                 configMapKeyRef:
-                  name: mutuelle-config
+                  name: {{ include "private-recruiter-portfolio.fullname" . }}-config
                   key: frontend-origin
             - name: DOCUMENTS_FOLDER
               valueFrom:
                 configMapKeyRef:
-                  name: mutuelle-config
+                  name: {{ include "private-recruiter-portfolio.fullname" . }}-config
                   key: documents-folder
             - name: RECRUITER_ACCESS_TOKEN_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: mutuelle-secrets
+                  name: {{ .Values.secrets.existingSecretName }}
                   key: recruiter-access-token-secret
             - name: ADMIN_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: mutuelle-secrets
+                  name: {{ .Values.secrets.existingSecretName }}
                   key: admin-api-key
             - name: RECRUITER_ACCESS_FROM_EMAIL
               valueFrom:
                 configMapKeyRef:
-                  name: mutuelle-config
+                  name: {{ include "private-recruiter-portfolio.fullname" . }}-config
                   key: recruiter-access-from-email
             - name: RECRUITER_ACCESS_FROM_NAME
               valueFrom:
                 configMapKeyRef:
-                  name: mutuelle-config
+                  name: {{ include "private-recruiter-portfolio.fullname" . }}-config
                   key: recruiter-access-from-name
             - name: RECRUITER_ACCESS_REPLY_TO
               valueFrom:
                 configMapKeyRef:
-                  name: mutuelle-config
+                  name: {{ include "private-recruiter-portfolio.fullname" . }}-config
                   key: recruiter-access-reply-to
             - name: RECRUITER_ACCESS_EMAIL_SUBJECT
               valueFrom:
                 configMapKeyRef:
-                  name: mutuelle-config
+                  name: {{ include "private-recruiter-portfolio.fullname" . }}-config
                   key: recruiter-access-email-subject
             - name: BREVO_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: mutuelle-secrets
+                  name: {{ .Values.secrets.existingSecretName }}
                   key: brevo-api-key
             - name: BREVO_TEMPLATE_ID
               valueFrom:
                 configMapKeyRef:
-                  name: mutuelle-config
+                  name: {{ include "private-recruiter-portfolio.fullname" . }}-config
                   key: brevo-template-id
             - name: RECRUITER_ACCESS_CAPTCHA_PROVIDER
               valueFrom:
                 configMapKeyRef:
-                  name: mutuelle-config
+                  name: {{ include "private-recruiter-portfolio.fullname" . }}-config
                   key: recruiter-access-captcha-provider
             - name: RECRUITER_ACCESS_CAPTCHA_SITE_KEY
               valueFrom:
                 configMapKeyRef:
-                  name: mutuelle-config
+                  name: {{ include "private-recruiter-portfolio.fullname" . }}-config
                   key: recruiter-access-captcha-site-key
             - name: RECRUITER_ACCESS_CAPTCHA_RECAPTCHA_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: mutuelle-secrets
+                  name: {{ .Values.secrets.existingSecretName }}
                   key: recruiter-access-captcha-recaptcha-secret-key
                   optional: true
           resources:
-            requests:
-              memory: "512Mi"
-              cpu: "250m"
-            limits:
-              memory: "2Gi"
-              cpu: "1000m"
+            {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
-              port: 9090
+              port: {{ .Values.management.port }}
             initialDelaySeconds: 60
             periodSeconds: 10
             timeoutSeconds: 5
@@ -163,32 +154,16 @@ spec:
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
-              port: 9090
+              port: {{ .Values.management.port }}
             initialDelaySeconds: 30
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 3
           securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop:
-                - ALL
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
           volumeMounts:
             - name: tmp
               mountPath: /tmp
       volumes:
         - name: tmp
           emptyDir: {}
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              podAffinityTerm:
-                labelSelector:
-                  matchExpressions:
-                    - key: app
-                      operator: In
-                      values:
-                        - mutuelle-rag-agent
-                topologyKey: kubernetes.io/hostname

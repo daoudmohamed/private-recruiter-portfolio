@@ -1,0 +1,50 @@
+server:
+  error:
+    include-message: always
+    include-stacktrace: on_param
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+
+springdoc:
+  swagger-ui:
+    enabled: true
+
+logging:
+  level:
+    root: DEBUG
+    com.knowledgebase: DEBUG
+    org.springframework.ai: DEBUG
+
+knowledgebase:
+  security:
+    api-key: ""  # No API key required in dev
+    admin-api-key: ""
+  recruiter-access:
+    enabled: true
+    request-invitation-enabled: true
+    invitation-ttl-hours: 24
+    session-ttl-hours: 24
+    frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
+    token-secret: ${RECRUITER_ACCESS_TOKEN_SECRET:dev-recruiter-secret}
+    captcha:
+      provider: NONE
+      site-key: ""
+      verify-enabled: false
+    email:
+      provider: LOG
+      from-email: ${RECRUITER_ACCESS_FROM_EMAIL:noreplay@daoud.me}
+      from-name: ${RECRUITER_ACCESS_FROM_NAME:Knowledge Base Dev}
+      subject: ${RECRUITER_ACCESS_EMAIL_SUBJECT:Votre acces recruteur}
+      brevo:
+        api-key: ${BREVO_API_KEY:}
+        template-id: ${BREVO_TEMPLATE_ID:}
+        reply-to: ${RECRUITER_ACCESS_REPLY_TO:noreplay@daoud.me}
+  documents:
+    scan-on-startup: true

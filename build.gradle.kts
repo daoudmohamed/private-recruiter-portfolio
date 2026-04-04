@@ -70,6 +70,7 @@ dependencies {
 
     // Logging
     implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")
+    implementation("io.micrometer:micrometer-registry-prometheus")
 
     // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")

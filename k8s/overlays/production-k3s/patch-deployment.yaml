@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mutuelle-rag-agent
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: mutuelle-rag-agent
+          resources:
+            requests:
+              memory: "384Mi"
+              cpu: "150m"
+            limits:
+              memory: "1200Mi"
+              cpu: "750m"

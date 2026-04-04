@@ -1,0 +1,41 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mutuelle-production
+
+resources:
+  - ../../base
+
+nameSuffix: -prod
+
+patches:
+  - path: patch-deployment.yaml
+    target:
+      kind: Deployment
+      name: mutuelle-rag-agent
+
+  - path: patch-ingress.yaml
+    target:
+      kind: Ingress
+      name: mutuelle-rag-agent
+
+  - path: remove-hpa.yaml
+    target:
+      kind: HorizontalPodAutoscaler
+      name: mutuelle-rag-agent
+
+  - path: remove-pdb.yaml
+    target:
+      kind: PodDisruptionBudget
+      name: mutuelle-rag-agent
+
+configMapGenerator:
+  - name: mutuelle-config
+    behavior: merge
+    literals:
+      - redis-host=redis-prod
+      - qdrant-host=qdrant-prod
+      - frontend-base-url=https://portfolio.example.com
+      - frontend-origin=https://portfolio.example.com
+      - recruiter-access-from-email=noreply@example.com
+      - recruiter-access-reply-to=contact@example.com

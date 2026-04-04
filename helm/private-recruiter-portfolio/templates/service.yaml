@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "private-recruiter-portfolio.fullname" . }}
+  labels:
+    {{- include "private-recruiter-portfolio.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "private-recruiter-portfolio.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+    - name: management
+      port: {{ .Values.management.servicePort }}
+      targetPort: {{ .Values.management.port }}
+      protocol: TCP

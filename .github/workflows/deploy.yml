@@ -1,0 +1,125 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Image tag to deploy. Defaults to the current commit SHA.
+        required: false
+        type: string
+      dry_run:
+        description: Render and validate manifests without applying them
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.31.0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v4.1.3
+
+      - name: Prepare deployment context
+        id: prep
+        env:
+          INPUT_TAG: ${{ inputs.image_tag }}
+        run: |
+          IMAGE_TAG="${INPUT_TAG:-$GITHUB_SHA}"
+          echo "namespace=mutuelle-production" >> "$GITHUB_OUTPUT"
+          echo "release=private-recruiter-portfolio" >> "$GITHUB_OUTPUT"
+          echo "deployment=private-recruiter-portfolio" >> "$GITHUB_OUTPUT"
+          echo "chart=./helm/private-recruiter-portfolio" >> "$GITHUB_OUTPUT"
+          echo "values=./helm/private-recruiter-portfolio/values.production-k3s.yaml" >> "$GITHUB_OUTPUT"
+          echo "image_repository=ghcr.io/${GITHUB_REPOSITORY}" >> "$GITHUB_OUTPUT"
+          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Write kubeconfig
+        if: ${{ !inputs.dry_run }}
+        env:
+          KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG_B64 }}
+        run: |
+          if [ -z "$KUBE_CONFIG_B64" ]; then
+            echo "KUBE_CONFIG_B64 is not configured for environment production" >&2
+            exit 1
+          fi
+          echo "$KUBE_CONFIG_B64" | base64 --decode > "$RUNNER_TEMP/kubeconfig"
+          chmod 600 "$RUNNER_TEMP/kubeconfig"
+          echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig" >> "$GITHUB_ENV"
+
+      - name: Validate cluster prerequisites
+        if: ${{ !inputs.dry_run }}
+        run: |
+          kubectl get namespace "${{ steps.prep.outputs.namespace }}"
+          kubectl get secret mutuelle-secrets --namespace "${{ steps.prep.outputs.namespace }}"
+          kubectl get service redis-prod --namespace "${{ steps.prep.outputs.namespace }}"
+          kubectl get service qdrant-prod --namespace "${{ steps.prep.outputs.namespace }}"
+
+      - name: Lint Helm chart
+        run: |
+          helm lint "${{ steps.prep.outputs.chart }}"
+
+      - name: Render Helm manifests
+        run: |
+          helm template "${{ steps.prep.outputs.release }}" "${{ steps.prep.outputs.chart }}" \
+            --namespace "${{ steps.prep.outputs.namespace }}" \
+            -f "${{ steps.prep.outputs.values }}" \
+            --set image.repository="${{ steps.prep.outputs.image_repository }}" \
+            --set image.tag="${{ steps.prep.outputs.image_tag }}" \
+            > "$RUNNER_TEMP/rendered.yaml"
+
+      - name: Validate rendered manifests
+        run: |
+          kubectl apply --dry-run=client -f "$RUNNER_TEMP/rendered.yaml"
+
+      - name: Deploy Helm release
+        if: ${{ !inputs.dry_run }}
+        run: |
+          helm upgrade --install "${{ steps.prep.outputs.release }}" "${{ steps.prep.outputs.chart }}" \
+            --namespace "${{ steps.prep.outputs.namespace }}" \
+            --create-namespace \
+            -f "${{ steps.prep.outputs.values }}" \
+            --set image.repository="${{ steps.prep.outputs.image_repository }}" \
+            --set image.tag="${{ steps.prep.outputs.image_tag }}"
+
+          kubectl rollout status deployment/${{ steps.prep.outputs.deployment }} \
+            --namespace "${{ steps.prep.outputs.namespace }}" \
+            --timeout=180s
+
+      - name: Post-deploy smoke checks
+        if: ${{ !inputs.dry_run }}
+        run: |
+          kubectl port-forward deployment/${{ steps.prep.outputs.deployment }} \
+            --namespace "${{ steps.prep.outputs.namespace }}" \
+            18080:8080 19090:9090 >/tmp/port-forward.log 2>&1 &
+          PF_PID=$!
+          trap 'kill $PF_PID' EXIT
+          sleep 5
+
+          curl --fail --silent http://127.0.0.1:19090/actuator/health >/tmp/health.json
+          curl --fail --silent http://127.0.0.1:19090/actuator/prometheus >/tmp/prometheus.txt
+          curl --fail --silent http://127.0.0.1:18080/api/v1/recruiter-access/session >/tmp/recruiter-session.json
+
+          grep -q '"status":"UP"' /tmp/health.json
+          grep -q 'jvm_memory_used_bytes' /tmp/prometheus.txt
+          grep -q '"authenticated":false' /tmp/recruiter-session.json || grep -q '"authenticated":true' /tmp/recruiter-session.json

@@ -64,7 +64,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       show-details: when-authorized
@@ -90,6 +90,7 @@ knowledgebase:
     public-paths:
       - /actuator/health/**
       - /actuator/info
+      - /actuator/prometheus
       - /api-docs/**
       - /swagger-ui/**
       - /swagger-ui.html

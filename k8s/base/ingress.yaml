@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mutuelle-rag-agent
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: portfolio.example.invalid
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mutuelle-rag-agent
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - portfolio.example.invalid
+      secretName: mutuelle-rag-agent-tls

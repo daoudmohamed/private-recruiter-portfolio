@@ -28,6 +28,20 @@ patches:
       kind: HorizontalPodAutoscaler
       name: mutuelle-rag-agent
 
+  - patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: portfolio-staging.example.com
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: portfolio-staging.example.com
+      - op: replace
+        path: /spec/tls/0/secretName
+        value: portfolio-staging-example-com-tls
+    target:
+      kind: Ingress
+      name: mutuelle-rag-agent
+
 configMapGenerator:
   - name: mutuelle-config
     behavior: merge

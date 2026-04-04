@@ -11,6 +11,7 @@ build/
 *.ipr
 *.iws
 .vscode/
+.claude/settings.local.json
 .classpath
 .project
 .settings/
@@ -20,6 +21,7 @@ build/
 
 # Application secrets
 application-local.yml
+src/main/resources/application-dev.yml
 .env
 
 # Documents (may contain personal files)
