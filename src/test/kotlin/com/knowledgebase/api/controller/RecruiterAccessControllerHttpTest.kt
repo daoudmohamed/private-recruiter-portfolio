@@ -6,6 +6,7 @@ import com.knowledgebase.application.service.InvitationRequestRateLimitService
 import com.knowledgebase.application.service.RecruiterAccessException
 import com.knowledgebase.application.service.RecruiterAccessSessionService
 import com.knowledgebase.application.service.RecruiterInvitationService
+import com.knowledgebase.support.fetchCsrfToken
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.coEvery
 import io.mockk.coJustRun
@@ -60,6 +61,8 @@ class RecruiterAccessControllerHttpTest {
 
     @Test
     fun `consume should expose stable recruiter access error code`() {
+        val csrfToken = webTestClient.fetchCsrfToken()
+
         coEvery { recruiterInvitationService.consumeInvitation("used-token") } throws RecruiterAccessException(
             status = HttpStatus.BAD_REQUEST,
             reason = "Lien d'acces deja utilise",
@@ -68,6 +71,8 @@ class RecruiterAccessControllerHttpTest {
 
         webTestClient.post()
             .uri("/api/v1/recruiter-access/consume")
+            .cookie("XSRF-TOKEN", csrfToken)
+            .header("X-XSRF-TOKEN", csrfToken)
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue("""{"token":"used-token"}""")
             .exchange()
@@ -81,8 +86,12 @@ class RecruiterAccessControllerHttpTest {
 
     @Test
     fun `logout should reject cross-origin request`() {
+        val csrfToken = webTestClient.fetchCsrfToken()
+
         webTestClient.post()
             .uri("/api/v1/recruiter-access/logout")
+            .cookie("XSRF-TOKEN", csrfToken)
+            .header("X-XSRF-TOKEN", csrfToken)
             .header("Origin", "https://evil.example")
             .exchange()
             .expectStatus().isForbidden
@@ -90,6 +99,8 @@ class RecruiterAccessControllerHttpTest {
 
     @Test
     fun `logout should allow configured frontend origin`() {
+        val csrfToken = webTestClient.fetchCsrfToken()
+
         coJustRun { recruiterAccessSessionService.invalidateSession("session-123") }
         coEvery { recruiterAccessSessionService.clearSessionCookie() } returns ResponseCookie.from("kb_recruiter_session", "")
             .path("/")
@@ -98,6 +109,8 @@ class RecruiterAccessControllerHttpTest {
 
         webTestClient.post()
             .uri("/api/v1/recruiter-access/logout")
+            .cookie("XSRF-TOKEN", csrfToken)
+            .header("X-XSRF-TOKEN", csrfToken)
             .header("Origin", "http://localhost:5173")
             .cookie("kb_recruiter_session", "session-123")
             .exchange()

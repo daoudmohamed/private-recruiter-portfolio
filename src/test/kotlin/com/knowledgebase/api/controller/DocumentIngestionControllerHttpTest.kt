@@ -4,6 +4,7 @@ import com.ninjasquad.springmockk.MockkBean
 import com.knowledgebase.ai.rag.DocumentIngestionService
 import com.knowledgebase.ai.rag.FolderScanSummary
 import com.knowledgebase.ai.rag.FolderScannerService
+import com.knowledgebase.support.fetchCsrfToken
 import io.mockk.coEvery
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -41,6 +42,8 @@ class DocumentIngestionControllerHttpTest {
 
     @Test
     fun `post documents scan should expose scan summary`() {
+        val csrfToken = webTestClient.fetchCsrfToken()
+
         coEvery { folderScannerService.scanFolder() } returns FolderScanSummary(
             totalDocuments = 4,
             documentsIngested = listOf("cv.md", "faq.pdf"),
@@ -50,6 +53,8 @@ class DocumentIngestionControllerHttpTest {
 
         webTestClient.post()
             .uri("/api/v1/documents/scan")
+            .cookie("XSRF-TOKEN", csrfToken)
+            .header("X-XSRF-TOKEN", csrfToken)
             .exchange()
             .expectStatus().isOk
             .expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_JSON)
@@ -77,10 +82,14 @@ class DocumentIngestionControllerHttpTest {
 
     @Test
     fun `delete document source should expose deletion outcome`() {
+        val csrfToken = webTestClient.fetchCsrfToken()
+
         coEvery { documentIngestionService.deleteBySource("cv.md") } returns true
 
         webTestClient.delete()
             .uri("/api/v1/documents/cv.md")
+            .cookie("XSRF-TOKEN", csrfToken)
+            .header("X-XSRF-TOKEN", csrfToken)
             .exchange()
             .expectStatus().isOk
             .expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_JSON)

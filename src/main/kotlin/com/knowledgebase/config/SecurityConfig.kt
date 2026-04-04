@@ -5,9 +5,14 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity
 import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.security.web.server.SecurityWebFilterChain
+import org.springframework.security.web.server.csrf.CookieServerCsrfTokenRepository
+import org.springframework.security.web.server.csrf.CsrfToken
+import org.springframework.security.web.server.csrf.ServerCsrfTokenRequestAttributeHandler
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.reactive.CorsConfigurationSource
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
+import org.springframework.web.server.WebFilter
+import reactor.core.publisher.Mono
 
 /**
  * Security configuration - API Key auth handled by ApiKeyFilter.
@@ -21,8 +26,15 @@ class SecurityConfig(
     @Bean
     fun securityWebFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
         val publicPaths = knowledgeBaseProperties.security.publicPaths.toTypedArray()
+        val csrfTokenRepository = CookieServerCsrfTokenRepository.withHttpOnlyFalse().apply {
+            setCookiePath("/")
+        }
+        val csrfTokenRequestHandler = ServerCsrfTokenRequestAttributeHandler()
         return http
-            .csrf { it.disable() }
+            .csrf { csrf ->
+                csrf.csrfTokenRepository(csrfTokenRepository)
+                csrf.csrfTokenRequestHandler(csrfTokenRequestHandler)
+            }
             .cors { it.configurationSource(corsConfigurationSource()) }
             .httpBasic { it.disable() }
             .formLogin { it.disable() }
@@ -32,6 +44,14 @@ class SecurityConfig(
                     .anyExchange().permitAll()  // API key checked by ApiKeyFilter
             }
             .build()
+    }
+
+    @Bean
+    fun csrfCookieWebFilter(): WebFilter = WebFilter { exchange, chain ->
+        @Suppress("UNCHECKED_CAST")
+        val csrfToken = exchange.attributes[CsrfToken::class.java.name] as? Mono<CsrfToken>
+        csrfToken?.subscribe()
+        chain.filter(exchange)
     }
 
     @Bean

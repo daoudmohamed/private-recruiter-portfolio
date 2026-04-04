@@ -6,6 +6,7 @@ import com.knowledgebase.application.service.SessionService
 import com.knowledgebase.domain.model.ChatChunk
 import com.knowledgebase.domain.model.ChatRequest
 import com.knowledgebase.domain.model.ChatResponse
+import com.knowledgebase.support.fetchCsrfToken
 import io.mockk.coEvery
 import io.mockk.every
 import kotlinx.coroutines.flow.flowOf
@@ -45,6 +46,7 @@ class ChatControllerHttpTest {
 
     @Test
     fun `post chat sync should return aggregated response`() {
+        val csrfToken = webTestClient.fetchCsrfToken()
         val request = ChatRequest(sessionId = "session-123", message = "Bonjour")
 
         coEvery { chatService.chat(request) } returns ChatResponse(
@@ -54,6 +56,8 @@ class ChatControllerHttpTest {
 
         webTestClient.post()
             .uri("/api/v1/chat/sync")
+            .cookie("XSRF-TOKEN", csrfToken)
+            .header("X-XSRF-TOKEN", csrfToken)
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(
                 """
@@ -73,6 +77,7 @@ class ChatControllerHttpTest {
 
     @Test
     fun `post chat should stream server sent events`() {
+        val csrfToken = webTestClient.fetchCsrfToken()
         val request = ChatRequest(sessionId = "session-123", message = "Bonjour")
 
         every { chatService.streamChat(request) } returns flowOf(
@@ -82,6 +87,8 @@ class ChatControllerHttpTest {
 
         val body = webTestClient.post()
             .uri("/api/v1/chat")
+            .cookie("XSRF-TOKEN", csrfToken)
+            .header("X-XSRF-TOKEN", csrfToken)
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.TEXT_EVENT_STREAM)
             .bodyValue(
