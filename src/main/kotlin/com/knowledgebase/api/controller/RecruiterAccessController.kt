@@ -13,12 +13,16 @@ import com.knowledgebase.application.service.RecruiterInvitationService
 import com.knowledgebase.config.KnowledgeBaseProperties
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.server.ResponseStatusException
 import org.springframework.web.server.ServerWebExchange
+import java.net.URI
 
 @RestController
 @RequestMapping("/api/v1/recruiter-access")
@@ -115,11 +119,30 @@ class RecruiterAccessController(
     suspend fun logout(
         exchange: ServerWebExchange
     ): Map<String, Boolean> {
+        validateSameOriginLogoutRequest(exchange)
+
         val cookie = exchange.request.cookies.getFirst(knowledgeBaseProperties.recruiterAccess.cookieName)
         if (cookie != null) {
             recruiterAccessSessionService.invalidateSession(cookie.value)
         }
         exchange.response.addCookie(recruiterAccessSessionService.clearSessionCookie())
         return mapOf("success" to true)
+    }
+
+    private fun validateSameOriginLogoutRequest(exchange: ServerWebExchange) {
+        val configuredBaseUrl = knowledgeBaseProperties.recruiterAccess.frontendBaseUrl.trim()
+        if (configuredBaseUrl.isBlank()) {
+            return
+        }
+
+        val expectedOrigin = runCatching {
+            val uri = URI(configuredBaseUrl)
+            "${uri.scheme}://${uri.authority}"
+        }.getOrNull() ?: return
+
+        val requestOrigin = exchange.request.headers.getFirst(HttpHeaders.ORIGIN)?.trim()
+        if (requestOrigin == null || requestOrigin != expectedOrigin) {
+            throw ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid request origin")
+        }
     }
 }
