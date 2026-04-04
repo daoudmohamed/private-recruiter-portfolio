@@ -4,6 +4,7 @@ Ce depot utilise GitHub Actions pour couvrir 3 niveaux:
 
 1. `CI`
 - scan de secrets
+- installation du binaire officiel Gitleaks
 - tests backend Gradle
 - lint + build frontend
 - validation Docker Compose
@@ -12,8 +13,8 @@ Ce depot utilise GitHub Actions pour couvrir 3 niveaux:
 
 2. `Container Image`
 - build de l'image Docker depuis `docker/Dockerfile`
-- publication sur `ghcr.io/<owner>/<repo>`
-- scan de vulnerabilites Trivy sur l'image publiee
+- publication via un tag de quarantaine puis promotion vers les tags stables
+- scan de vulnerabilites Trivy prevu sur l'image publiee, mais temporairement desactive
 - cache Buildx
 - SBOM et provenance d'image
 
@@ -27,6 +28,15 @@ Ce depot utilise GitHub Actions pour couvrir 3 niveaux:
 - `kubectl rollout status` quand le deploy est reel
 - verification des prerequis cluster
 - smoke minimal post-deploiement
+
+4. `Security Analysis`
+- `dependency-review` sur pull request
+- CodeQL `java-kotlin` et `javascript-typescript`
+- Sonar optionnel si `SONAR_TOKEN` et `SONAR_HOST_URL` sont configures
+- DAST baseline OWASP ZAP prevu sur la stack Docker locale, mais temporairement desactive
+- couverture backend JaCoCo publiee vers Sonar
+- analyse frontend statique incluse dans Sonar
+- pas de couverture frontend tant qu'aucun test frontend n'existe dans le repo
 
 ## Helm
 
@@ -47,6 +57,16 @@ Reference:
 - `KUBE_CONFIG_B64`
   contenu: kubeconfig base64 du cluster production
 
+### Optionnels pour l'analyse securite
+- `SONAR_TOKEN`
+  secret repository ou organisation pour activer l'analyse Sonar
+
+### Variables GitHub optionnelles
+- `SONAR_HOST_URL`
+  URL du serveur SonarQube ou SonarCloud
+- `SONAR_PROJECT_KEY`
+  cle de projet Sonar
+
 ## Image publiee
 
 Image cible:
@@ -64,7 +84,7 @@ Tags generes:
 - PR:
   CI uniquement
 - merge sur `main`:
-  CI + build/push image
+  CI + Security Analysis + build/push image
 - deploy production:
   workflow manuel avec `environment=production`
   avec approbation GitHub Environment si activee
@@ -72,8 +92,14 @@ Tags generes:
 ## Pratiques de securite retenues
 
 - permissions GitHub Actions minimales par workflow
-- scan de secrets dans la CI
+- scan de secrets dans la CI via le binaire officiel Gitleaks
 - scan de vulnerabilites de l'image Docker
+- scan Trivy temporairement desactive le temps de stabiliser le workflow
+- review des dependances en PR
+- SAST structurel via CodeQL
+- DAST baseline via OWASP ZAP
+- analyse qualite/securite Sonar si configuree
 - image signee/attestee via provenance
 - deploiement manuel, pas d'auto-promotion implicite
 - secrets Kubernetes confines aux GitHub Environments
+- opt-in Node 24 active pour anticiper la fin du runtime Node 20 des actions JavaScript

@@ -1,0 +1,216 @@
+name: Security Analysis
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-review:
+    name: Dependency Review
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Dependency review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0
+
+  codeql-java-kotlin:
+    name: CodeQL Java/Kotlin
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: java-kotlin
+          build-mode: manual
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: gradle
+
+      - name: Build Java sources
+        run: |
+          chmod +x ./gradlew
+          ./gradlew classes testClasses --no-daemon
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:java-kotlin"
+
+  codeql-javascript-typescript:
+    name: CodeQL JavaScript/TypeScript
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend sources
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:javascript-typescript"
+
+  sonar:
+    name: Sonar Analysis
+    if: ${{ vars.SONAR_HOST_URL != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+      SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - name: Check Sonar configuration
+        id: sonar-config
+        run: |
+          if [ -n "${SONAR_TOKEN}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "SONAR_TOKEN not configured, skipping Sonar analysis."
+          fi
+
+      - name: Checkout
+        if: ${{ steps.sonar-config.outputs.enabled == 'true' }}
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 25
+        if: ${{ steps.sonar-config.outputs.enabled == 'true' }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: gradle
+
+      - name: Set up Node.js
+        if: ${{ steps.sonar-config.outputs.enabled == 'true' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        if: ${{ steps.sonar-config.outputs.enabled == 'true' }}
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run Sonar analysis
+        if: ${{ steps.sonar-config.outputs.enabled == 'true' }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew test jacocoTestReport sonar --no-daemon \
+            -Dsonar.host.url="${SONAR_HOST_URL}" \
+            -Dsonar.token="${SONAR_TOKEN}" \
+            -Dsonar.organization="${SONAR_ORGANIZATION}"
+
+  dast-baseline:
+    name: DAST Baseline
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Start application stack
+        env:
+          OPENAI_API_KEY: dummy
+          FRONTEND_BASE_URL: http://localhost:8080
+          FRONTEND_ORIGIN: http://localhost:8080
+        run: |
+          docker compose -f docker/docker-compose.yml up -d --build redis qdrant app
+
+      - name: Wait for app health
+        run: |
+          for _ in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8080/actuator/health >/tmp/health.json; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Application did not become healthy in time" >&2
+          docker compose -f docker/docker-compose.yml logs app
+          exit 1
+
+      - name: Run ZAP baseline scan
+        continue-on-error: true
+        run: |
+          mkdir -p ./reports/zap
+          docker run --rm --network host \
+            -v "${PWD}/reports/zap:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+            -t http://127.0.0.1:8080 \
+            -J zap-report.json \
+            -w zap-report.md \
+            -r zap-report.html
+
+      - name: Upload ZAP report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-baseline-report
+          path: reports/zap/
+
+      - name: Stop application stack
+        if: ${{ always() }}
+        run: docker compose -f docker/docker-compose.yml down -v

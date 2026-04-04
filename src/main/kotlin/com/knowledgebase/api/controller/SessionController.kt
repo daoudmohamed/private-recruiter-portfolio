@@ -66,7 +66,7 @@ class SessionController(
         val messageDtos = messages.map { message ->
             ChatMessageDto(
                 role = message.messageType.name,
-                content = message.text,
+                content = message.text ?: "",
                 timestamp = java.time.Instant.now() // Redis doesn't store timestamps by default
             )
         }

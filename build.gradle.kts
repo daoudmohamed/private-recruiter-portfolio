@@ -1,9 +1,12 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.gradle.testing.jacoco.tasks.JacocoReport
 
 plugins {
-    id("org.springframework.boot") version "4.0.0"
+    id("org.springframework.boot") version "4.0.5"
     id("io.spring.dependency-management") version "1.1.7"
+    jacoco
+    id("org.sonarqube") version "6.3.1.5724"
     kotlin("jvm") version "2.3.0"
     kotlin("plugin.spring") version "2.3.0"
 }
@@ -30,10 +33,12 @@ repositories {
     maven { url = uri("https://repo.spring.io/snapshot") }
 }
 
-extra["springAiVersion"] = "2.0.0-M1"
+extra["springAiVersion"] = "2.0.0-M2"
 extra["testcontainersVersion"] = "1.21.3"
 
 dependencies {
+    implementation(platform("io.grpc:grpc-bom:1.75.0"))
+
     // Spring Boot WebFlux
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -96,6 +101,21 @@ dependencyManagement {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    finalizedBy(tasks.named("jacocoTestReport"))
+}
+
+jacoco {
+    toolVersion = "0.8.13"
+}
+
+tasks.named<JacocoReport>("jacocoTestReport") {
+    dependsOn(tasks.test)
+
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        csv.required.set(false)
+    }
 }
 
 // Disable plain jar
@@ -109,4 +129,26 @@ compileKotlin.compilerOptions {
 
 tasks.withType<JavaCompile> {
     options.compilerArgs.add("-parameters")
+}
+
+sonar {
+    properties {
+        property("sonar.projectName", "private-recruiter-portfolio")
+        property(
+            "sonar.projectKey",
+            System.getenv("SONAR_PROJECT_KEY") ?: "private-recruiter-portfolio"
+        )
+        System.getenv("SONAR_ORGANIZATION")?.let {
+            property("sonar.organization", it)
+        }
+        property("sonar.sourceEncoding", "UTF-8")
+        property("sonar.sources", "src/main,frontend/src")
+        property("sonar.tests", "src/test")
+        property(
+            "sonar.exclusions",
+            "frontend/dist/**,frontend/node_modules/**,build/**,**/*.min.js,**/generated/**"
+        )
+        property("sonar.java.binaries", "build/classes")
+        property("sonar.coverage.jacoco.xmlReportPaths", "build/reports/jacoco/test/jacocoTestReport.xml")
+    }
 }

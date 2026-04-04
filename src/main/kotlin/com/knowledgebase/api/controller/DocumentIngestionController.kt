@@ -102,7 +102,7 @@ class DocumentIngestionController(
     /**
      * Delete documents by source filename.
      */
-    @DeleteMapping("/{source}")
+    @DeleteMapping("/{source:.+}")
     @Operation(summary = "Delete documents by source")
     suspend fun deleteBySource(
         @PathVariable source: String
