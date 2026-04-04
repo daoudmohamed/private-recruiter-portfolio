@@ -59,7 +59,7 @@ class SecurityConfig(
     @Bean
     fun csrfProtectionMatcher(): ServerWebExchangeMatcher = ServerWebExchangeMatcher { exchange ->
         val method = exchange.request.method
-        if (method == null || method in setOf(HttpMethod.GET, HttpMethod.HEAD, HttpMethod.OPTIONS, HttpMethod.TRACE)) {
+        if (method in setOf(HttpMethod.GET, HttpMethod.HEAD, HttpMethod.OPTIONS, HttpMethod.TRACE)) {
             return@ServerWebExchangeMatcher ServerWebExchangeMatcher.MatchResult.notMatch()
         }
 
@@ -106,8 +106,11 @@ class SecurityConfig(
         val effectiveAdminApiKey = knowledgeBaseProperties.security.adminApiKey.ifBlank {
             knowledgeBaseProperties.security.apiKey
         }
+        if (effectiveAdminApiKey.isBlank()) {
+            return false
+        }
 
-        return effectiveAdminApiKey.isNotBlank() && providedKey == effectiveAdminApiKey
+        return providedKey == effectiveAdminApiKey
     }
 
     private fun isCsrfExemptPath(path: String): Boolean {

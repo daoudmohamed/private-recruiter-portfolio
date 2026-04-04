@@ -36,3 +36,4 @@ logs/
 # Build artifacts
 out/
 target/
+frontend/coverage/

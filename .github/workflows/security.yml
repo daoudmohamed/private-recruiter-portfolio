@@ -151,6 +151,11 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Run frontend coverage
+        if: ${{ steps.sonar-config.outputs.enabled == 'true' }}
+        working-directory: frontend
+        run: npm run test:coverage
+
       - name: Run Sonar analysis
         if: ${{ steps.sonar-config.outputs.enabled == 'true' }}
         run: |

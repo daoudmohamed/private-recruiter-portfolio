@@ -53,8 +53,8 @@ Ne pas utiliser `:sha256-...` sauf si c'est reellement un tag publie comme tel.
 - Sonar optionnel si `SONAR_TOKEN` et `SONAR_HOST_URL` sont configures
 - DAST baseline OWASP ZAP prevu sur la stack Docker locale, mais temporairement desactive
 - couverture backend JaCoCo publiee vers Sonar
+- couverture frontend Vitest `lcov` publiee vers Sonar
 - analyse frontend statique incluse dans Sonar
-- pas de couverture frontend tant qu'aucun test frontend n'existe dans le repo
 
 ## Helm
 
