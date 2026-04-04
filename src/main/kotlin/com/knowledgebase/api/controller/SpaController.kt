@@ -1,11 +1,18 @@
 package com.knowledgebase.api.controller
 
+import org.springframework.core.io.ClassPathResource
+import org.springframework.core.io.Resource
+import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.ResponseBody
 
 /**
- * Forwards non-API browser routes to the React entrypoint so the SPA can be
- * served by the same Spring Boot runtime as the backend APIs.
+ * Serves the React entrypoint for browser routes that should be handled by the
+ * SPA client router. WebFlux does not resolve "forward:/index.html" like MVC,
+ * so the entrypoint resource is returned directly.
  */
 @Controller
 class SpaController {
@@ -15,5 +22,12 @@ class SpaController {
         "/{path:^(?!api|actuator|swagger-ui|api-docs|webjars)[^.]*}",
         "/**/{path:^(?!api|actuator|swagger-ui|api-docs|webjars)[^.]*}"
     )
-    fun index(): String = "forward:/index.html"
+    @ResponseBody
+    fun index(): ResponseEntity<Resource> {
+        val resource = ClassPathResource("static/index.html")
+        return ResponseEntity.ok()
+            .contentType(MediaType.TEXT_HTML)
+            .header(HttpHeaders.CACHE_CONTROL, "no-cache")
+            .body(resource)
+    }
 }

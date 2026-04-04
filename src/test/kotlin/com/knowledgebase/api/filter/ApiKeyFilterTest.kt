@@ -97,6 +97,25 @@ class ApiKeyFilterTest {
         assertThat(exchange.response.statusCode).isNull()
     }
 
+    @Test
+    fun `should bypass authentication for frontend root path`() {
+        val filter = ApiKeyFilter(
+            KnowledgeBaseProperties(
+                security = KnowledgeBaseProperties.Security(
+                    apiKey = "secret-key",
+                    publicPaths = listOf("/")
+                )
+            )
+        )
+        val exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/").build())
+        val chain = RecordingChain()
+
+        filter.filter(exchange, chain).block()
+
+        assertThat(chain.called).isTrue()
+        assertThat(exchange.response.statusCode).isNull()
+    }
+
     private class RecordingChain : WebFilterChain {
         var called: Boolean = false
 

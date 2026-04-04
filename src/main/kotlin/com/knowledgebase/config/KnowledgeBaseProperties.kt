@@ -31,6 +31,13 @@ data class KnowledgeBaseProperties(
         val adminApiKey: String = "",
         @field:NotEmpty
         val publicPaths: List<@NotBlank String> = listOf(
+            "/",
+            "/index.html",
+            "/vite.svg",
+            "/favicon.ico",
+            "/assets/**",
+            "/access",
+            "/access/**",
             "/actuator/health/**",
             "/actuator/info",
             "/api-docs/**",

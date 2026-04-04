@@ -1,0 +1,70 @@
+services:
+  app:
+    image: ${APP_IMAGE:?Set APP_IMAGE to a GHCR image reference}
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-dev}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - QDRANT_HOST=qdrant
+      - QDRANT_GRPC_PORT=6334
+      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-http://localhost:8080}
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:8080}
+      - API_KEY=${API_KEY:-}
+      - ADMIN_API_KEY=${ADMIN_API_KEY:-}
+      - DOCUMENTS_FOLDER=/app/documents
+    depends_on:
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    networks:
+      - kb-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  redis:
+    image: redis:7-alpine
+    container_name: kb-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - kb-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: kb-qdrant
+    volumes:
+      - qdrant_data:/qdrant/storage
+      - ./qdrant/config.yaml:/qdrant/config/production.yaml:ro
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    networks:
+      - kb-network
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+
+volumes:
+  redis_data:
+    driver: local
+  qdrant_data:
+    driver: local
+
+networks:
+  kb-network:
+    driver: bridge

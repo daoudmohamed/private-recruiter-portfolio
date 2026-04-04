@@ -23,6 +23,7 @@ build/
 application-local.yml
 src/main/resources/application-dev.yml
 .env
+docker/.env
 
 # Documents (may contain personal files)
 documents/*

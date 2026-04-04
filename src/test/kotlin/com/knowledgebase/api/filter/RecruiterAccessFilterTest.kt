@@ -81,6 +81,30 @@ class RecruiterAccessFilterTest {
         assertThat(chain.called).isTrue()
     }
 
+    @Test
+    fun `should allow frontend root path without recruiter session`() {
+        val sessionService = mockk<RecruiterAccessSessionService>()
+        val filter = RecruiterAccessFilter(
+            KnowledgeBaseProperties(
+                security = KnowledgeBaseProperties.Security(
+                    publicPaths = listOf("/")
+                ),
+                recruiterAccess = KnowledgeBaseProperties.RecruiterAccess(
+                    enabled = true,
+                    tokenSecret = "secret"
+                )
+            ),
+            sessionService
+        )
+        val exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/").build())
+        val chain = RecordingChain()
+
+        filter.filter(exchange, chain).block()
+
+        assertThat(chain.called).isTrue()
+        assertThat(exchange.response.statusCode).isNull()
+    }
+
     private class RecordingChain : WebFilterChain {
         var called: Boolean = false
 

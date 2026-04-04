@@ -13,10 +13,28 @@ Ce depot utilise GitHub Actions pour couvrir 3 niveaux:
 
 2. `Container Image`
 - build de l'image Docker depuis `docker/Dockerfile`
-- publication sur `ghcr.io/<owner>/<repo>`
-- scan de vulnerabilites Trivy sur l'image publiee
+- publication via un tag de quarantaine puis promotion vers les tags stables
+- scan de vulnerabilites Trivy prevu sur l'image publiee, mais temporairement desactive
 - cache Buildx
 - SBOM et provenance d'image
+
+### Lancer localement l'image GHCR
+
+Si tu veux lancer localement l'image publiee sans rebuild:
+
+```bash
+APP_IMAGE='ghcr.io/daoudmohamed/private-recruiter-portfolio:main' \
+docker compose -f docker/docker-compose.ghcr.yml up -d
+```
+
+Si tu veux lancer un digest precis, utilise la syntaxe Docker correcte avec `@sha256:`:
+
+```bash
+APP_IMAGE='ghcr.io/daoudmohamed/private-recruiter-portfolio@sha256:<digest>' \
+docker compose -f docker/docker-compose.ghcr.yml up -d
+```
+
+Ne pas utiliser `:sha256-...` sauf si c'est reellement un tag publie comme tel.
 
 3. `Deploy`
 - declenchement manuel vers `production`
@@ -94,6 +112,7 @@ Tags generes:
 - permissions GitHub Actions minimales par workflow
 - scan de secrets dans la CI via le binaire officiel Gitleaks
 - scan de vulnerabilites de l'image Docker
+- scan Trivy temporairement desactive le temps de stabiliser le workflow
 - review des dependances en PR
 - SAST structurel via CodeQL
 - DAST baseline via OWASP ZAP
