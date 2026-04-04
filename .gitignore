@@ -2,6 +2,8 @@
 .gradle/
 build/
 !gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
 
 # IDE
 .idea/
@@ -9,19 +11,25 @@ build/
 *.ipr
 *.iws
 .vscode/
+.classpath
+.project
+.settings/
 
-# Environment files with secrets
-.env
-application-local.yml
-src/main/resources/application-local.yml
-
-# OS
+# MacOS
 .DS_Store
-Thumbs.db
+
+# Application secrets
+application-local.yml
+.env
+
+# Documents (may contain personal files)
+documents/*
+!documents/README.md
 
 # Logs
-*.log
 logs/
+*.log
 
-# Kotlin
-*.class
+# Build artifacts
+out/
+target/

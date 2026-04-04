@@ -1,55 +1,25 @@
-# Production profile configuration
-
-spring:
-  # Production database pool settings
-  r2dbc:
-    pool:
-      initial-size: 10
-      max-size: 50
-      max-idle-time: 10m
-
-  # Redis production settings
-  data:
-    redis:
-      lettuce:
-        pool:
-          max-active: 32
-          max-idle: 16
-          min-idle: 8
-
-# Production server settings
 server:
   error:
     include-message: never
     include-stacktrace: never
 
-# Restricted actuator endpoints in production
 management:
   endpoints:
     web:
       exposure:
-        include: health,metrics,prometheus
+        include: health,metrics
   endpoint:
     health:
       show-details: when-authorized
 
-# Disable Swagger in production
 springdoc:
   swagger-ui:
     enabled: false
   api-docs:
     enabled: false
 
-# Production logging (less verbose)
 logging:
   level:
     root: WARN
-    com.mutuelle: INFO
+    com.knowledgebase: INFO
     org.springframework.ai: WARN
-    org.springframework.r2dbc: WARN
-    org.springframework.security: WARN
-
-# Production application settings
-mutuelle:
-  rate-limit:
-    requests-per-minute: 100
