@@ -13,8 +13,8 @@ Ce depot utilise GitHub Actions pour couvrir 3 niveaux:
 
 2. `Container Image`
 - build de l'image Docker depuis `docker/Dockerfile`
-- publication via un tag de quarantaine puis promotion vers les tags stables
-- scan de vulnerabilites Trivy prevu sur l'image publiee, mais temporairement desactive
+- publication sur `ghcr.io/<owner>/<repo>`
+- scan de vulnerabilites Trivy sur l'image publiee
 - cache Buildx
 - SBOM et provenance d'image
 
@@ -94,7 +94,6 @@ Tags generes:
 - permissions GitHub Actions minimales par workflow
 - scan de secrets dans la CI via le binaire officiel Gitleaks
 - scan de vulnerabilites de l'image Docker
-- scan Trivy temporairement desactive le temps de stabiliser le workflow
 - review des dependances en PR
 - SAST structurel via CodeQL
 - DAST baseline via OWASP ZAP
