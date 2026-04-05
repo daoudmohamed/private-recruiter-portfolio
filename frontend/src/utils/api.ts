@@ -54,6 +54,44 @@ function buildJsonHeaders(): Record<string, string> {
   return { 'Content-Type': 'application/json' }
 }
 
+function readCookie(name: string): string | null {
+  if (typeof document === 'undefined') {
+    return null
+  }
+
+  const prefix = `${name}=`
+  const cookie = document.cookie
+    .split(';')
+    .map(value => value.trim())
+    .find(value => value.startsWith(prefix))
+
+  if (!cookie) {
+    return null
+  }
+
+  return decodeURIComponent(cookie.substring(prefix.length))
+}
+
+function withCsrfHeader(options: RequestInit): RequestInit {
+  const method = (options.method ?? 'GET').toUpperCase()
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    return options
+  }
+
+  const headers = new Headers(options.headers)
+  if (!headers.has('X-XSRF-TOKEN')) {
+    const token = readCookie('XSRF-TOKEN')
+    if (token) {
+      headers.set('X-XSRF-TOKEN', token)
+    }
+  }
+
+  return {
+    ...options,
+    headers,
+  }
+}
+
 function errorMessageForStatus(status: number): string {
   switch (status) {
     case 401: return 'Acces temporaire requis ou expire.'
@@ -88,8 +126,9 @@ export async function fetchWithTimeout(
   const timeoutId = setTimeout(() => controller.abort(), timeout)
 
   try {
+    const requestOptions = withCsrfHeader(options)
     const response = await fetch(url, {
-      ...options,
+      ...requestOptions,
       credentials: 'include',
       signal: controller.signal,
     })

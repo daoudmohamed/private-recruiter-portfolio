@@ -2,6 +2,7 @@ package com.knowledgebase.config
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.springframework.http.HttpMethod
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest
 import org.springframework.mock.web.server.MockServerWebExchange
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
@@ -33,5 +34,43 @@ class SecurityConfigTest {
         assertThat(configuration.allowedHeaders).containsExactly("Authorization")
         assertThat(configuration.allowCredentials).isFalse()
         assertThat(configuration.maxAge).isEqualTo(120)
+    }
+
+    @Test
+    fun `should skip csrf for non-browser API key request on non-browser path`() {
+        val properties = KnowledgeBaseProperties(
+            security = KnowledgeBaseProperties.Security(
+                adminApiKey = "admin-key"
+            )
+        )
+        val matcher = SecurityConfig(properties).csrfProtectionMatcher()
+        val exchange = MockServerWebExchange.from(
+            MockServerHttpRequest.method(HttpMethod.POST, "/api/v1/chat")
+                .header("Authorization", "Bearer admin-key")
+                .build()
+        )
+
+        val result = matcher.matches(exchange).block()
+
+        assertThat(result?.isMatch).isFalse()
+    }
+
+    @Test
+    fun `should require csrf for recruiter invitation creation even with API key`() {
+        val properties = KnowledgeBaseProperties(
+            security = KnowledgeBaseProperties.Security(
+                adminApiKey = "admin-key"
+            )
+        )
+        val matcher = SecurityConfig(properties).csrfProtectionMatcher()
+        val exchange = MockServerWebExchange.from(
+            MockServerHttpRequest.method(HttpMethod.POST, "/api/v1/recruiter-access/invitations")
+                .header("X-API-Key", "admin-key")
+                .build()
+        )
+
+        val result = matcher.matches(exchange).block()
+
+        assertThat(result?.isMatch).isTrue()
     }
 }

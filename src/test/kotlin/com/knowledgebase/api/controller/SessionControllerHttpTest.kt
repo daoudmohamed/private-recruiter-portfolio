@@ -5,6 +5,7 @@ import com.knowledgebase.ai.memory.RedisChatMemory
 import com.knowledgebase.application.service.SessionService
 import com.knowledgebase.domain.model.ConversationSession
 import com.knowledgebase.domain.model.SessionStatus
+import com.knowledgebase.support.fetchCsrfToken
 import io.mockk.coEvery
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
@@ -45,6 +46,8 @@ class SessionControllerHttpTest {
 
     @Test
     fun `post sessions should create a session`() {
+        val csrfToken = webTestClient.fetchCsrfToken()
+
         coEvery { sessionService.createSession() } returns ConversationSession(
             id = "session-123",
             startedAt = Instant.parse("2026-03-26T10:00:00Z"),
@@ -55,6 +58,8 @@ class SessionControllerHttpTest {
 
         webTestClient.post()
             .uri("/api/v1/sessions")
+            .cookie("XSRF-TOKEN", csrfToken)
+            .header("X-XSRF-TOKEN", csrfToken)
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue("""{}""")
             .exchange()

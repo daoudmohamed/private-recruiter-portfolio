@@ -143,12 +143,15 @@ sonar {
         }
         property("sonar.sourceEncoding", "UTF-8")
         property("sonar.sources", "src/main,frontend/src")
-        property("sonar.tests", "src/test")
+        property("sonar.tests", "src/test,frontend/src")
+        property("sonar.test.inclusions", "src/test/**/*,frontend/src/**/*.test.ts,frontend/src/**/*.spec.ts")
         property(
             "sonar.exclusions",
             "frontend/dist/**,frontend/node_modules/**,build/**,**/*.min.js,**/generated/**"
         )
         property("sonar.java.binaries", "build/classes")
         property("sonar.coverage.jacoco.xmlReportPaths", "build/reports/jacoco/test/jacocoTestReport.xml")
+        property("sonar.javascript.lcov.reportPaths", "frontend/coverage/lcov.info")
+        property("sonar.typescript.lcov.reportPaths", "frontend/coverage/lcov.info")
     }
 }
