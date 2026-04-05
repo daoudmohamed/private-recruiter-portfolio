@@ -144,7 +144,7 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           startupProbe:
             httpGet:
-              path: /actuator/health/liveness
+              path: /actuator/health
               port: {{ .Values.management.port }}
             initialDelaySeconds: 10
             periodSeconds: 10
@@ -152,7 +152,7 @@ spec:
             failureThreshold: 24
           livenessProbe:
             httpGet:
-              path: /actuator/health/liveness
+              path: /actuator/health
               port: {{ .Values.management.port }}
             initialDelaySeconds: 0
             periodSeconds: 10
@@ -160,7 +160,7 @@ spec:
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /actuator/health/readiness
+              path: /actuator/health
               port: {{ .Values.management.port }}
             initialDelaySeconds: 0
             periodSeconds: 5
