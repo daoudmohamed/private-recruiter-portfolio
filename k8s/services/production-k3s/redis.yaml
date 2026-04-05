@@ -42,6 +42,10 @@ spec:
             - --save
             - "60"
             - "1"
+            - --maxmemory
+            - 192mb
+            - --maxmemory-policy
+            - allkeys-lru
           ports:
             - containerPort: 6379
               name: redis
@@ -63,7 +67,7 @@ spec:
               memory: 128Mi
             limits:
               cpu: 300m
-              memory: 512Mi
+              memory: 256Mi
           volumeMounts:
             - name: redis-data
               mountPath: /data
