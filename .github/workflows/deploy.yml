@@ -236,10 +236,18 @@ jobs:
       - name: Post-deploy smoke checks
         if: ${{ !inputs.dry_run }}
         run: |
+          kubectl get service "${{ steps.prep.outputs.release }}" --namespace "${{ steps.prep.outputs.namespace }}"
+          kubectl get ingress "${{ steps.prep.outputs.release }}" --namespace "${{ steps.prep.outputs.namespace }}"
+          kubectl get endpoints "${{ steps.prep.outputs.release }}" --namespace "${{ steps.prep.outputs.namespace }}" -o json > /tmp/endpoints.json
+
+          grep -q '"addresses"' /tmp/endpoints.json
+
           curl --fail --silent "${{ steps.prep.outputs.public_base_url }}/actuator/health" >/tmp/health.json
           curl --fail --silent "${{ steps.prep.outputs.public_base_url }}/actuator/prometheus" >/tmp/prometheus.txt
           curl --fail --silent "${{ steps.prep.outputs.public_base_url }}/api/v1/recruiter-access/session" >/tmp/recruiter-session.json
+          curl --fail --silent --location "${{ steps.prep.outputs.public_base_url }}/" >/tmp/home.html
 
           grep -q '"status":"UP"' /tmp/health.json
           grep -q 'jvm_memory_used_bytes' /tmp/prometheus.txt
           grep -q '"authenticated":false' /tmp/recruiter-session.json || grep -q '"authenticated":true' /tmp/recruiter-session.json
+          grep -qi '<html' /tmp/home.html
