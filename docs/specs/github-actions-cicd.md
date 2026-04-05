@@ -40,6 +40,7 @@ Ne pas utiliser `:sha256-...` sauf si c'est reellement un tag publie comme tel.
 - declenchement manuel vers `production`
 - environnement GitHub `production`
 - connexion au tailnet via Tailscale avant tout acces au cluster
+- provisionnement de `redis-prod` et `qdrant-prod` depuis le repo avant le deploiement applicatif
 - lint Helm
 - rendu Helm avec remplacement d'image
 - `dry_run` par defaut
@@ -152,6 +153,7 @@ Modele retenu:
 - les vraies valeurs publiques d'Ingress (`PUBLIC_HOST`, `PUBLIC_BASE_URL`, `TLS_SECRET_NAME`) sont injectees par l'environnement GitHub `production`, pas hardcodees dans le repo
 - si `TLS_CERT_PEM` et `TLS_KEY_PEM` sont presents, le workflow cree ou met a jour automatiquement le secret TLS Kubernetes reference par `TLS_SECRET_NAME`
 - le workflow cree ou met a jour automatiquement le secret applicatif `mutuelle-secrets` depuis les secrets GitHub `production`
+- le workflow applique aussi `k8s/services/production-k3s` pour provisionner `redis-prod` et `qdrant-prod` avec PVC avant le deploiement de l'application
 
 Pre-requis cote infra:
 

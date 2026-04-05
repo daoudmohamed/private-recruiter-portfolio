@@ -112,6 +112,13 @@ jobs:
         run: |
           kubectl create namespace "${{ steps.prep.outputs.namespace }}" --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Reconcile stateful dependencies
+        if: ${{ !inputs.dry_run }}
+        run: |
+          kubectl apply -k ./k8s/services/production-k3s
+          kubectl rollout status statefulset/redis-prod --namespace "${{ steps.prep.outputs.namespace }}" --timeout=180s
+          kubectl rollout status statefulset/qdrant-prod --namespace "${{ steps.prep.outputs.namespace }}" --timeout=180s
+
       - name: Reconcile ingress TLS secret
         if: ${{ !inputs.dry_run }}
         env:
