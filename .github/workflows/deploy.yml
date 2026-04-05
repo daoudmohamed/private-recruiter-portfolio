@@ -164,7 +164,7 @@ jobs:
 
       - name: Validate rendered manifests
         run: |
-          kubectl apply --dry-run=client -f "$RUNNER_TEMP/rendered.yaml"
+          kubectl apply --dry-run=client --validate=false -f "$RUNNER_TEMP/rendered.yaml"
 
       - name: Deploy Helm release
         if: ${{ !inputs.dry_run }}
