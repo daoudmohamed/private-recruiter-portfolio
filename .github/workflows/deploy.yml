@@ -221,7 +221,17 @@ jobs:
 
           kubectl rollout status deployment/${{ steps.prep.outputs.deployment }} \
             --namespace "${{ steps.prep.outputs.namespace }}" \
-            --timeout=180s
+            --timeout=420s
+
+      - name: Dump rollout diagnostics on failure
+        if: ${{ !inputs.dry_run && failure() }}
+        run: |
+          kubectl get pods,svc,ingress,endpoints -n "${{ steps.prep.outputs.namespace }}" -o wide || true
+          kubectl describe deployment "${{ steps.prep.outputs.deployment }}" -n "${{ steps.prep.outputs.namespace }}" || true
+          kubectl describe ingress "${{ steps.prep.outputs.release }}" -n "${{ steps.prep.outputs.namespace }}" || true
+          kubectl get rs -n "${{ steps.prep.outputs.namespace }}" || true
+          kubectl describe pods -n "${{ steps.prep.outputs.namespace }}" || true
+          kubectl logs deployment/${{ steps.prep.outputs.deployment }} -n "${{ steps.prep.outputs.namespace }}" --tail=200 || true
 
       - name: Post-deploy smoke checks
         if: ${{ !inputs.dry_run }}
