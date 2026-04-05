@@ -162,13 +162,19 @@ Consequence:
 
 Minimum smoke checks after each deployment:
 
-1. `GET /actuator/health`
+1. deployment `Ready` and service endpoints populated
 2. `GET /api/v1/recruiter-access/session`
-3. invitation request flow
-4. invitation consumption flow
-5. `POST /api/v1/sessions`
-6. one chat streaming request
-7. one document listing request if enabled
+3. `GET /`
+4. invitation request flow
+5. invitation consumption flow
+6. `POST /api/v1/sessions`
+7. one chat streaming request
+8. one document listing request if enabled
+
+Operational note:
+
+- actuator/management checks stay internal on port `9090`
+- public ingress validation stays on the application port `8080`
 
 Expected result:
 

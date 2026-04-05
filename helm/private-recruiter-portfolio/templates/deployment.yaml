@@ -27,12 +27,11 @@ spec:
             - name: http
               containerPort: {{ .Values.service.targetPort }}
               protocol: TCP
-            - name: management
-              containerPort: {{ .Values.management.port }}
-              protocol: TCP
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "prod"
+            - name: JAVA_TOOL_OPTIONS
+              value: {{ .Values.jvm.javaToolOptions | quote }}
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
@@ -143,19 +142,27 @@ spec:
                   optional: true
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: {{ .Values.management.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 24
           livenessProbe:
             httpGet:
-              path: /actuator/health/liveness
+              path: /actuator/health
               port: {{ .Values.management.port }}
-            initialDelaySeconds: 60
+            initialDelaySeconds: 0
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /actuator/health/readiness
+              path: /actuator/health
               port: {{ .Values.management.port }}
-            initialDelaySeconds: 30
+            initialDelaySeconds: 0
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 3

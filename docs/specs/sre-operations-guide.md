@@ -60,6 +60,17 @@ Only increase after observing:
 - response latency
 - chat concurrency
 
+Current `production-k3s` target on 8 GB Raspberry:
+
+- app request: `384Mi`
+- app limit: `1024Mi`
+- JVM bounded with `JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=60 -XX:InitialRAMPercentage=25 -XX:+UseContainerSupport"`
+
+Operational intent:
+
+- keep the app heap under control instead of relying only on the cgroup limit
+- leave headroom for native memory, Netty, and filesystem cache
+
 ### Redis
 
 Guidance:
@@ -68,6 +79,15 @@ Guidance:
 - set memory cap explicitly
 - keep append-only mode only if the hardware and storage can sustain it
 
+Current `production-k3s` target on 8 GB Raspberry:
+
+- request: `128Mi`
+- limit: `256Mi`
+- Redis `maxmemory`: `192mb`
+- policy: `allkeys-lru`
+
+This is intentionally conservative because Redis in this product holds ephemeral/session-oriented data, not the primary durable business source of truth.
+
 ### Qdrant
 
 Guidance:
@@ -75,6 +95,13 @@ Guidance:
 - persistent volume required
 - SSD strongly preferred over SD card
 - watch memory use as embeddings and documents grow
+
+Current `production-k3s` target on 8 GB Raspberry:
+
+- request: `256Mi`
+- limit: `1Gi`
+
+Keep this budget for now unless real data volume shows pressure.
 
 ## 5. Storage Guidance
 
@@ -167,7 +194,9 @@ Run GitHub Actions deploy workflow:
 Verify:
 
 - Deployment rollout complete
-- `GET /actuator/health`
+- service endpoints populated
+- `GET /`
+- `GET /api/v1/recruiter-access/session`
 - recruiter invitation request works
 - recruiter invitation consumption works
 - chat works on at least one known grounded question

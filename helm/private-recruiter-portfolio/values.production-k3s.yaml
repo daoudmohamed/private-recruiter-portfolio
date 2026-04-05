@@ -14,6 +14,11 @@ management:
   port: 9090
   servicePort: 9090
 
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: /actuator/prometheus
+  prometheus.io/port: "9090"
+
 ingress:
   enabled: true
   className: traefik
@@ -30,8 +35,11 @@ resources:
     memory: 384Mi
     cpu: 150m
   limits:
-    memory: 1200Mi
+    memory: 1024Mi
     cpu: 750m
+
+jvm:
+  javaToolOptions: "-XX:MaxRAMPercentage=60 -XX:InitialRAMPercentage=25 -XX:+UseContainerSupport"
 
 redis:
   host: redis-prod
