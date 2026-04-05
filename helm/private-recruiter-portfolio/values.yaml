@@ -54,6 +54,9 @@ resources:
     memory: 1200Mi
     cpu: 750m
 
+jvm:
+  javaToolOptions: ""
+
 redis:
   host: redis-prod
   port: "6379"
