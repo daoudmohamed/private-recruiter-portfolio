@@ -83,6 +83,20 @@ Reference:
   contenu PEM du certificat origin TLS a installer en secret Kubernetes. Optionnel si le secret TLS existe deja dans le cluster.
 - `TLS_KEY_PEM`
   contenu PEM de la cle privee associee a `TLS_CERT_PEM`. Optionnel si le secret TLS existe deja dans le cluster.
+- `OPENAI_API_KEY`
+  cle OpenAI utilisee par l'application
+- `RECRUITER_ACCESS_TOKEN_SECRET`
+  secret de signature des tokens d'acces recruteur
+- `ADMIN_API_KEY`
+  cle API admin pour les endpoints proteges
+- `BREVO_API_KEY`
+  cle API Brevo pour l'envoi d'emails recruteur
+- `RECRUITER_ACCESS_CAPTCHA_RECAPTCHA_SECRET_KEY`
+  secret reCAPTCHA origin si le captcha est active. Optionnel si le provider est `NONE`.
+- `REDIS_PASSWORD`
+  mot de passe Redis si ton service Redis en utilise un. Optionnel sinon.
+- `QDRANT_API_KEY`
+  cle API Qdrant si ton service Qdrant en utilise une. Optionnel sinon.
 
 ### Variables GitHub d'environnement `production`
 - `TS_K8S_HOST`
@@ -137,6 +151,7 @@ Modele retenu:
 - le kubeconfig stocke dans `KUBE_CONFIG_B64` vise l'endpoint Kubernetes sur l'adresse Tailscale du Raspberry
 - les vraies valeurs publiques d'Ingress (`PUBLIC_HOST`, `PUBLIC_BASE_URL`, `TLS_SECRET_NAME`) sont injectees par l'environnement GitHub `production`, pas hardcodees dans le repo
 - si `TLS_CERT_PEM` et `TLS_KEY_PEM` sont presents, le workflow cree ou met a jour automatiquement le secret TLS Kubernetes reference par `TLS_SECRET_NAME`
+- le workflow cree ou met a jour automatiquement le secret applicatif `mutuelle-secrets` depuis les secrets GitHub `production`
 
 Pre-requis cote infra:
 

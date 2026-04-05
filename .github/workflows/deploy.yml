@@ -130,6 +130,32 @@ jobs:
             echo "TLS_CERT_PEM/TLS_KEY_PEM not provided; expecting TLS secret '$TLS_SECRET_NAME' to already exist in the cluster."
           fi
 
+      - name: Reconcile application secrets
+        if: ${{ !inputs.dry_run }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          RECRUITER_ACCESS_TOKEN_SECRET: ${{ secrets.RECRUITER_ACCESS_TOKEN_SECRET }}
+          ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          RECRUITER_ACCESS_CAPTCHA_RECAPTCHA_SECRET_KEY: ${{ secrets.RECRUITER_ACCESS_CAPTCHA_RECAPTCHA_SECRET_KEY }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ] || [ -z "$RECRUITER_ACCESS_TOKEN_SECRET" ] || [ -z "$ADMIN_API_KEY" ] || [ -z "$BREVO_API_KEY" ]; then
+            echo "OPENAI_API_KEY, RECRUITER_ACCESS_TOKEN_SECRET, ADMIN_API_KEY, and BREVO_API_KEY must be configured in the production environment" >&2
+            exit 1
+          fi
+
+          kubectl -n "${{ steps.prep.outputs.namespace }}" create secret generic mutuelle-secrets \
+            --from-literal=openai-api-key="$OPENAI_API_KEY" \
+            --from-literal=recruiter-access-token-secret="$RECRUITER_ACCESS_TOKEN_SECRET" \
+            --from-literal=admin-api-key="$ADMIN_API_KEY" \
+            --from-literal=brevo-api-key="$BREVO_API_KEY" \
+            --from-literal=recruiter-access-captcha-recaptcha-secret-key="$RECRUITER_ACCESS_CAPTCHA_RECAPTCHA_SECRET_KEY" \
+            --from-literal=redis-password="$REDIS_PASSWORD" \
+            --from-literal=qdrant-api-key="$QDRANT_API_KEY" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Verify cluster access through Tailscale
         if: ${{ !inputs.dry_run }}
         run: |
