@@ -107,6 +107,11 @@ jobs:
           chmod 600 "$RUNNER_TEMP/kubeconfig"
           echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig" >> "$GITHUB_ENV"
 
+      - name: Ensure target namespace exists
+        if: ${{ !inputs.dry_run }}
+        run: |
+          kubectl create namespace "${{ steps.prep.outputs.namespace }}" --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Reconcile ingress TLS secret
         if: ${{ !inputs.dry_run }}
         env:
