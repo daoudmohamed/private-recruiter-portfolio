@@ -194,7 +194,9 @@ Run GitHub Actions deploy workflow:
 Verify:
 
 - Deployment rollout complete
-- `GET /actuator/health`
+- service endpoints populated
+- `GET /`
+- `GET /api/v1/recruiter-access/session`
 - recruiter invitation request works
 - recruiter invitation consumption works
 - chat works on at least one known grounded question

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: Image tag to deploy. Defaults to the current commit SHA.
+        description: Image tag to deploy. Defaults to main.
         required: false
         type: string
       dry_run:
@@ -74,7 +74,6 @@ jobs:
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
-          tags: tag:ci
           ping: ${{ vars.TS_K8S_HOST }}
 
       - name: Prepare deployment context
@@ -82,7 +81,7 @@ jobs:
         env:
           INPUT_TAG: ${{ inputs.image_tag }}
         run: |
-          IMAGE_TAG="${INPUT_TAG:-$GITHUB_SHA}"
+          IMAGE_TAG="${INPUT_TAG:-main}"
           echo "namespace=mutuelle-production" >> "$GITHUB_OUTPUT"
           echo "release=private-recruiter-portfolio" >> "$GITHUB_OUTPUT"
           echo "deployment=private-recruiter-portfolio" >> "$GITHUB_OUTPUT"
@@ -244,8 +243,6 @@ jobs:
 
           curl --fail --silent "${{ steps.prep.outputs.public_base_url }}/api/v1/recruiter-access/session" >/tmp/recruiter-session.json
           curl --fail --silent --location "${{ steps.prep.outputs.public_base_url }}/" >/tmp/home.html
-          curl --fail --silent "${{ steps.prep.outputs.public_base_url }}/actuator/prometheus" >/tmp/prometheus.txt
 
-          grep -q 'jvm_memory_used_bytes' /tmp/prometheus.txt
           grep -q '"authenticated":false' /tmp/recruiter-session.json || grep -q '"authenticated":true' /tmp/recruiter-session.json
           grep -qi '<html' /tmp/home.html

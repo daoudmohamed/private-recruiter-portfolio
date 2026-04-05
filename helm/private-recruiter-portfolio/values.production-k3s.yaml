@@ -11,13 +11,13 @@ service:
   targetPort: 8080
 
 management:
-  port: 8080
-  servicePort: 8080
+  port: 9090
+  servicePort: 9090
 
 podAnnotations:
   prometheus.io/scrape: "true"
   prometheus.io/path: /actuator/prometheus
-  prometheus.io/port: "8080"
+  prometheus.io/port: "9090"
 
 ingress:
   enabled: true

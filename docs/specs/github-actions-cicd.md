@@ -160,7 +160,6 @@ Pre-requis cote infra:
 - Tailscale installe et connecte sur le Raspberry
 - l'API Kubernetes `k3s` ecoute sur l'interface Tailscale accessible depuis le tailnet
 - le `server:` du kubeconfig reference l'IP ou le nom MagicDNS Tailscale du noeud
-- le tag `tag:ci` est autorise par ta policy Tailscale pour joindre le Raspberry/K3s
 
 Exemple de `server:` attendu dans le kubeconfig:
 
