@@ -19,8 +19,8 @@ class SpaController {
 
     @GetMapping(
         "/",
-        "/{path:^(?!api|actuator|swagger-ui|api-docs|webjars)[^.]*}",
-        "/**/{path:^(?!api|actuator|swagger-ui|api-docs|webjars)[^.]*}"
+        "/access",
+        "/access/{path:[^.]*}"
     )
     @ResponseBody
     fun index(): ResponseEntity<Resource> {
