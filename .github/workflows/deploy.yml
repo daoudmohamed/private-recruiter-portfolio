@@ -49,6 +49,9 @@ jobs:
           TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           TS_OAUTH_SECRET: ${{ secrets.TS_OAUTH_SECRET }}
           TS_K8S_HOST: ${{ vars.TS_K8S_HOST }}
+          PUBLIC_HOST: ${{ vars.PUBLIC_HOST }}
+          PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
+          TLS_SECRET_NAME: ${{ vars.TLS_SECRET_NAME }}
         run: |
           if [ -z "$TS_OAUTH_CLIENT_ID" ] || [ -z "$TS_OAUTH_SECRET" ]; then
             echo "TS_OAUTH_CLIENT_ID and TS_OAUTH_SECRET must be configured in the production environment" >&2
@@ -57,6 +60,11 @@ jobs:
 
           if [ -z "$TS_K8S_HOST" ]; then
             echo "TS_K8S_HOST must be configured in the production environment" >&2
+            exit 1
+          fi
+
+          if [ -z "$PUBLIC_HOST" ] || [ -z "$PUBLIC_BASE_URL" ] || [ -z "$TLS_SECRET_NAME" ]; then
+            echo "PUBLIC_HOST, PUBLIC_BASE_URL, and TLS_SECRET_NAME must be configured in the production environment" >&2
             exit 1
           fi
 
@@ -82,6 +90,9 @@ jobs:
           echo "values=./helm/private-recruiter-portfolio/values.production-k3s.yaml" >> "$GITHUB_OUTPUT"
           echo "image_repository=ghcr.io/${GITHUB_REPOSITORY}" >> "$GITHUB_OUTPUT"
           echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "public_host=${{ vars.PUBLIC_HOST }}" >> "$GITHUB_OUTPUT"
+          echo "public_base_url=${{ vars.PUBLIC_BASE_URL }}" >> "$GITHUB_OUTPUT"
+          echo "tls_secret_name=${{ vars.TLS_SECRET_NAME }}" >> "$GITHUB_OUTPUT"
 
       - name: Write kubeconfig
         if: ${{ !inputs.dry_run }}
@@ -96,6 +107,29 @@ jobs:
           chmod 600 "$RUNNER_TEMP/kubeconfig"
           echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig" >> "$GITHUB_ENV"
 
+      - name: Reconcile ingress TLS secret
+        if: ${{ !inputs.dry_run }}
+        env:
+          TLS_SECRET_NAME: ${{ vars.TLS_SECRET_NAME }}
+          TLS_CERT_PEM: ${{ secrets.TLS_CERT_PEM }}
+          TLS_KEY_PEM: ${{ secrets.TLS_KEY_PEM }}
+        run: |
+          if [ -n "$TLS_CERT_PEM" ] && [ -n "$TLS_KEY_PEM" ]; then
+            CERT_FILE="$RUNNER_TEMP/origin-tls.crt"
+            KEY_FILE="$RUNNER_TEMP/origin-tls.key"
+
+            printf '%s' "$TLS_CERT_PEM" > "$CERT_FILE"
+            printf '%s' "$TLS_KEY_PEM" > "$KEY_FILE"
+            chmod 600 "$CERT_FILE" "$KEY_FILE"
+
+            kubectl -n "${{ steps.prep.outputs.namespace }}" create secret tls "$TLS_SECRET_NAME" \
+              --cert="$CERT_FILE" \
+              --key="$KEY_FILE" \
+              --dry-run=client -o yaml | kubectl apply -f -
+          else
+            echo "TLS_CERT_PEM/TLS_KEY_PEM not provided; expecting TLS secret '$TLS_SECRET_NAME' to already exist in the cluster."
+          fi
+
       - name: Verify cluster access through Tailscale
         if: ${{ !inputs.dry_run }}
         run: |
@@ -107,6 +141,7 @@ jobs:
         run: |
           kubectl get namespace "${{ steps.prep.outputs.namespace }}"
           kubectl get secret mutuelle-secrets --namespace "${{ steps.prep.outputs.namespace }}"
+          kubectl get secret "${{ steps.prep.outputs.tls_secret_name }}" --namespace "${{ steps.prep.outputs.namespace }}"
           kubectl get service redis-prod --namespace "${{ steps.prep.outputs.namespace }}"
           kubectl get service qdrant-prod --namespace "${{ steps.prep.outputs.namespace }}"
 
@@ -121,6 +156,10 @@ jobs:
             -f "${{ steps.prep.outputs.values }}" \
             --set image.repository="${{ steps.prep.outputs.image_repository }}" \
             --set image.tag="${{ steps.prep.outputs.image_tag }}" \
+            --set ingress.host="${{ steps.prep.outputs.public_host }}" \
+            --set ingress.tls.secretName="${{ steps.prep.outputs.tls_secret_name }}" \
+            --set frontend.baseUrl="${{ steps.prep.outputs.public_base_url }}" \
+            --set frontend.origin="${{ steps.prep.outputs.public_base_url }}" \
             > "$RUNNER_TEMP/rendered.yaml"
 
       - name: Validate rendered manifests
@@ -135,7 +174,11 @@ jobs:
             --create-namespace \
             -f "${{ steps.prep.outputs.values }}" \
             --set image.repository="${{ steps.prep.outputs.image_repository }}" \
-            --set image.tag="${{ steps.prep.outputs.image_tag }}"
+            --set image.tag="${{ steps.prep.outputs.image_tag }}" \
+            --set ingress.host="${{ steps.prep.outputs.public_host }}" \
+            --set ingress.tls.secretName="${{ steps.prep.outputs.tls_secret_name }}" \
+            --set frontend.baseUrl="${{ steps.prep.outputs.public_base_url }}" \
+            --set frontend.origin="${{ steps.prep.outputs.public_base_url }}"
 
           kubectl rollout status deployment/${{ steps.prep.outputs.deployment }} \
             --namespace "${{ steps.prep.outputs.namespace }}" \

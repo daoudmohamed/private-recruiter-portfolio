@@ -79,10 +79,20 @@ Reference:
   secret Tailscale OAuth client id utilise par GitHub Actions pour rejoindre le tailnet
 - `TS_OAUTH_SECRET`
   secret Tailscale OAuth client secret utilise par GitHub Actions pour rejoindre le tailnet
+- `TLS_CERT_PEM`
+  contenu PEM du certificat origin TLS a installer en secret Kubernetes. Optionnel si le secret TLS existe deja dans le cluster.
+- `TLS_KEY_PEM`
+  contenu PEM de la cle privee associee a `TLS_CERT_PEM`. Optionnel si le secret TLS existe deja dans le cluster.
 
 ### Variables GitHub d'environnement `production`
 - `TS_K8S_HOST`
   nom MagicDNS ou IP Tailscale du Raspberry/K3s. Utilise pour verifier que le runner voit bien le cluster a travers le tailnet.
+- `PUBLIC_HOST`
+  domaine public expose par Traefik, par exemple `portfolio.example.com`
+- `PUBLIC_BASE_URL`
+  URL publique canonique du site, par exemple `https://portfolio.example.com`
+- `TLS_SECRET_NAME`
+  nom du secret TLS Kubernetes utilise par l'Ingress, par exemple `portfolio-example-com-tls`
 
 ### Optionnels pour l'analyse securite
 - `SONAR_TOKEN`
@@ -125,6 +135,8 @@ Modele retenu:
 - le Raspberry rejoint le tailnet Tailscale
 - GitHub Actions rejoint temporairement le meme tailnet via `tailscale/github-action`
 - le kubeconfig stocke dans `KUBE_CONFIG_B64` vise l'endpoint Kubernetes sur l'adresse Tailscale du Raspberry
+- les vraies valeurs publiques d'Ingress (`PUBLIC_HOST`, `PUBLIC_BASE_URL`, `TLS_SECRET_NAME`) sont injectees par l'environnement GitHub `production`, pas hardcodees dans le repo
+- si `TLS_CERT_PEM` et `TLS_KEY_PEM` sont presents, le workflow cree ou met a jour automatiquement le secret TLS Kubernetes reference par `TLS_SECRET_NAME`
 
 Pre-requis cote infra:
 
