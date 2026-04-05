@@ -7,6 +7,7 @@ import com.knowledgebase.application.service.RecruiterAccessSessionService
 import com.knowledgebase.application.service.RecruiterInvitationService
 import com.knowledgebase.domain.model.RecruiterInvitation
 import com.knowledgebase.domain.model.RecruiterInvitationStatus
+import com.knowledgebase.support.fetchCsrfToken
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.coEvery
 import org.junit.jupiter.api.BeforeEach
@@ -62,7 +63,18 @@ class RecruiterAccessAdminHttpTest {
     }
 
     @Test
-    fun `admin invitation creation should allow valid api key without csrf token`() {
+    fun `admin invitation creation should reject valid api key without csrf token`() {
+        webTestClient.post()
+            .uri("/api/v1/recruiter-access/invitations")
+            .header("X-API-Key", "test-admin-key")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue("""{"email":"recruiter@example.com"}""")
+            .exchange()
+            .expectStatus().isForbidden
+    }
+
+    @Test
+    fun `admin invitation creation should allow valid api key with csrf token`() {
         coEvery { recruiterInvitationService.createInvitation("recruiter@example.com", null) } returns RecruiterInvitation(
             id = "invitation-123",
             email = "recruiter@example.com",
@@ -70,10 +82,13 @@ class RecruiterAccessAdminHttpTest {
             createdAt = Instant.parse("2026-04-04T20:00:00Z"),
             expiresAt = Instant.parse("2026-04-05T20:00:00Z")
         )
+        val csrfToken = webTestClient.fetchCsrfToken()
 
         webTestClient.post()
             .uri("/api/v1/recruiter-access/invitations")
             .header("X-API-Key", "test-admin-key")
+            .cookie("XSRF-TOKEN", csrfToken)
+            .header("X-XSRF-TOKEN", csrfToken)
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue("""{"email":"recruiter@example.com"}""")
             .exchange()

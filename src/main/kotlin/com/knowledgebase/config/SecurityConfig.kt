@@ -31,6 +31,9 @@ class SecurityConfig(
         "/api/v1/recruiter-access/request-invitation",
         "/api/v1/recruiter-access/consume"
     )
+    private val csrfRequiredApiKeyPaths = listOf(
+        "/api/v1/recruiter-access/invitations"
+    )
 
     @Bean
     fun securityWebFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
@@ -63,7 +66,7 @@ class SecurityConfig(
             return@ServerWebExchangeMatcher ServerWebExchangeMatcher.MatchResult.notMatch()
         }
 
-        if (hasStatelessApiKeyAuthentication(exchange)) {
+        if (hasStatelessApiKeyAuthentication(exchange) && !isCsrfRequiredApiKeyPath(exchange.request.path.value())) {
             return@ServerWebExchangeMatcher ServerWebExchangeMatcher.MatchResult.notMatch()
         }
 
@@ -98,7 +101,13 @@ class SecurityConfig(
     }
 
     private fun hasStatelessApiKeyAuthentication(exchange: org.springframework.web.server.ServerWebExchange): Boolean {
-        val providedKey = exchange.request.headers.getFirst("X-API-Key")?.trim().orEmpty()
+        val providedKey = exchange.request.headers.getFirst("X-API-Key")
+            ?.trim()
+            .takeUnless { it.isNullOrBlank() }
+            ?: exchange.request.headers.getFirst("Authorization")
+                ?.removePrefix("Bearer ")
+                ?.trim()
+                .orEmpty()
         if (providedKey.isBlank()) {
             return false
         }
@@ -116,6 +125,13 @@ class SecurityConfig(
     private fun isCsrfExemptPath(path: String): Boolean {
         val pathContainer = PathContainer.parsePath(path)
         return csrfExemptPaths.any { pattern ->
+            pathPatternParser.parse(pattern).matches(pathContainer)
+        }
+    }
+
+    private fun isCsrfRequiredApiKeyPath(path: String): Boolean {
+        val pathContainer = PathContainer.parsePath(path)
+        return csrfRequiredApiKeyPaths.any { pattern ->
             pathPatternParser.parse(pattern).matches(pathContainer)
         }
     }
