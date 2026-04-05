@@ -150,6 +150,7 @@ Modele retenu:
 - le Raspberry rejoint le tailnet Tailscale
 - GitHub Actions rejoint temporairement le meme tailnet via `tailscale/github-action`
 - le kubeconfig stocke dans `KUBE_CONFIG_B64` vise l'endpoint Kubernetes sur l'adresse Tailscale du Raspberry
+- les tags Tailscale demandes par le runner sont injectes via `TS_TAGS` dans l'environnement GitHub `production`
 - les vraies valeurs publiques d'Ingress (`PUBLIC_HOST`, `PUBLIC_BASE_URL`, `TLS_SECRET_NAME`) sont injectees par l'environnement GitHub `production`, pas hardcodees dans le repo
 - si `TLS_CERT_PEM` et `TLS_KEY_PEM` sont presents, le workflow cree ou met a jour automatiquement le secret TLS Kubernetes reference par `TLS_SECRET_NAME`
 - le workflow cree ou met a jour automatiquement le secret applicatif `mutuelle-secrets` depuis les secrets GitHub `production`

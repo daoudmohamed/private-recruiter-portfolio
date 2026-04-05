@@ -49,6 +49,7 @@ jobs:
           TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           TS_OAUTH_SECRET: ${{ secrets.TS_OAUTH_SECRET }}
           TS_K8S_HOST: ${{ vars.TS_K8S_HOST }}
+          TS_TAGS: ${{ vars.TS_TAGS }}
           PUBLIC_HOST: ${{ vars.PUBLIC_HOST }}
           PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
           TLS_SECRET_NAME: ${{ vars.TLS_SECRET_NAME }}
@@ -63,6 +64,11 @@ jobs:
             exit 1
           fi
 
+          if [ -z "$TS_TAGS" ]; then
+            echo "TS_TAGS must be configured in the production environment when using a Tailscale OAuth client" >&2
+            exit 1
+          fi
+
           if [ -z "$PUBLIC_HOST" ] || [ -z "$PUBLIC_BASE_URL" ] || [ -z "$TLS_SECRET_NAME" ]; then
             echo "PUBLIC_HOST, PUBLIC_BASE_URL, and TLS_SECRET_NAME must be configured in the production environment" >&2
             exit 1
@@ -74,6 +80,7 @@ jobs:
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: ${{ vars.TS_TAGS }}
           ping: ${{ vars.TS_K8S_HOST }}
 
       - name: Prepare deployment context
