@@ -49,6 +49,10 @@ This document lists the runtime configuration expected by the application and se
 - `RECRUITER_ACCESS_CAPTCHA_VERIFY_ENABLED`
 - `RECRUITER_ACCESS_CAPTCHA_RECAPTCHA_VERIFY_URL`
 
+Current supported explicit value for `RECRUITER_ACCESS_CAPTCHA_PROVIDER`:
+
+- `RECAPTCHA_V3`
+
 ## 5. Derived from Current Config
 
 The backend currently reads at least the following families:

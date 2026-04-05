@@ -21,7 +21,7 @@ env:
   TRIVY_VERSION: "0.65.0"
 
 concurrency:
-  group: image-${{ github.event.workflow_run.head_sha || github.sha }}
+  group: image-${{ github.event.workflow_run.head_branch || github.ref_name || github.sha }}
   cancel-in-progress: true
 
 jobs:

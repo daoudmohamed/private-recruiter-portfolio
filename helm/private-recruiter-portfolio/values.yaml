@@ -80,7 +80,7 @@ recruiterAccess:
     subject: Votre acces recruteur
     brevoTemplateId: "1"
   captcha:
-    provider: RECAPTCHA
+    provider: RECAPTCHA_V3
     siteKey: ""
 
 secrets:

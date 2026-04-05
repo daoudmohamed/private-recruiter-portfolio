@@ -85,6 +85,7 @@ data class RecruiterAccessSessionResponse(
     val authenticated: Boolean,
     val requestInvitationEnabled: Boolean = false,
     val captchaSiteKey: String? = null,
+    val captchaAction: String? = null,
     val expiresAt: Instant? = null
 )
 

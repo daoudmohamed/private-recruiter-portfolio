@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, AlertCircle, Database, Github, Linkedin, Mail, Briefcase, Code, Cpu, Globe, LockKeyhole, LogOut, RefreshCcw, ArrowRight, BadgeCheck, ShieldCheck, MessageSquareMore, Moon, Sun } from 'lucide-react';
 import ChatWindow from './components/ChatWindow';
@@ -26,12 +26,8 @@ import {
 declare global {
   interface Window {
     grecaptcha?: {
-      render: (container: HTMLElement, options: {
-        sitekey: string
-        callback: (token: string) => void
-        'expired-callback'?: () => void
-      }) => number
-      reset: (widgetId?: number) => void
+      ready: (callback: () => void) => void
+      execute: (siteKey: string, options: { action: string }) => Promise<string>
     }
   }
 }
@@ -41,6 +37,7 @@ type AccessState = {
   authenticated: boolean;
   requestInvitationEnabled: boolean;
   captchaSiteKey: string | null;
+  captchaAction: string | null;
   expiresAt: string | null;
   isChecking: boolean;
 };
@@ -78,6 +75,7 @@ function App() {
     authenticated: false,
     requestInvitationEnabled: false,
     captchaSiteKey: null,
+    captchaAction: null,
     expiresAt: null,
     isChecking: true,
   });
@@ -85,7 +83,7 @@ function App() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRequestMessage, setInviteRequestMessage] = useState<string | null>(null);
   const [isSubmittingInvite, setIsSubmittingInvite] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaReady, setCaptchaReady] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
     const saved = window.localStorage.getItem('prp-theme');
     if (saved === 'light' || saved === 'dark') {
@@ -93,9 +91,6 @@ function App() {
     }
     return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
   });
-  const captchaContainerRef = useRef<HTMLDivElement | null>(null);
-  const captchaWidgetIdRef = useRef<number | null>(null);
-
   const applyStreamChunk = (
     line: string,
     fullResponseRef: { current: string },
@@ -122,6 +117,7 @@ function App() {
       authenticated: access.authenticated,
       requestInvitationEnabled: access.requestInvitationEnabled,
       captchaSiteKey: access.captchaSiteKey ?? null,
+      captchaAction: access.captchaAction ?? null,
       expiresAt: access.expiresAt ?? null,
       isChecking: false,
     });
@@ -267,6 +263,7 @@ function App() {
               authenticated: consumed.authenticated,
               requestInvitationEnabled: consumed.requestInvitationEnabled,
               captchaSiteKey: consumed.captchaSiteKey ?? null,
+              captchaAction: consumed.captchaAction ?? null,
               expiresAt: consumed.expiresAt ?? null,
               isChecking: false,
             });
@@ -278,6 +275,7 @@ function App() {
               authenticated: session.authenticated,
               requestInvitationEnabled: session.requestInvitationEnabled,
               captchaSiteKey: session.captchaSiteKey ?? null,
+              captchaAction: session.captchaAction ?? null,
               expiresAt: session.expiresAt ?? null,
               isChecking: false,
             });
@@ -296,6 +294,7 @@ function App() {
           ...prev,
           enabled: true,
           authenticated: false,
+          captchaAction: prev.captchaAction,
           isChecking: false,
         }));
         setConnectionError(error instanceof Error ? error.message : 'Erreur inconnue');
@@ -323,6 +322,7 @@ function App() {
         authenticated: false,
         requestInvitationEnabled: accessState.requestInvitationEnabled,
         captchaSiteKey: accessState.captchaSiteKey,
+        captchaAction: accessState.captchaAction,
         expiresAt: null,
         isChecking: false,
       });
@@ -331,6 +331,7 @@ function App() {
 
   const showAccessGate = accessState.enabled && !accessState.authenticated;
   const requiresCaptcha = (accessState.captchaSiteKey ?? '').length > 0;
+  const captchaAction = accessState.captchaAction ?? 'request_invitation';
   const accessExpiryLabel = accessState.expiresAt
     ? new Date(accessState.expiresAt).toLocaleString('fr-FR', {
         day: '2-digit',
@@ -346,41 +347,41 @@ function App() {
 
   useEffect(() => {
     if (!showAccessGate || !requiresCaptcha) {
+      setCaptchaReady(false);
       return;
     }
 
     const existingScript = document.querySelector<HTMLScriptElement>('script[data-recaptcha="true"]');
     if (existingScript) {
-      renderCaptchaIfNeeded();
+      if (window.grecaptcha) {
+        window.grecaptcha.ready(() => setCaptchaReady(true));
+      }
       return;
     }
 
     const script = document.createElement('script');
-    script.src = `https://www.google.com/recaptcha/api.js?render=explicit`;
+    script.src = `https://www.google.com/recaptcha/api.js?render=${encodeURIComponent(accessState.captchaSiteKey ?? '')}`;
     script.async = true;
     script.defer = true;
     script.dataset.recaptcha = 'true';
-    script.onload = () => renderCaptchaIfNeeded();
+    script.onload = () => {
+      if (window.grecaptcha) {
+        window.grecaptcha.ready(() => setCaptchaReady(true));
+      }
+    };
     document.body.appendChild(script);
   }, [showAccessGate, requiresCaptcha, accessState.captchaSiteKey]);
 
-  const renderCaptchaIfNeeded = () => {
-    if (!requiresCaptcha || captchaWidgetIdRef.current !== null || !captchaContainerRef.current || !window.grecaptcha) {
-      return;
+  const createCaptchaToken = async (): Promise<string | undefined> => {
+    if (!requiresCaptcha) {
+      return undefined;
     }
 
-    captchaWidgetIdRef.current = window.grecaptcha.render(captchaContainerRef.current, {
-      sitekey: accessState.captchaSiteKey ?? '',
-      callback: (token: string) => setCaptchaToken(token),
-      'expired-callback': () => setCaptchaToken(null),
-    });
-  };
-
-  const resetCaptcha = () => {
-    setCaptchaToken(null);
-    if (window.grecaptcha && captchaWidgetIdRef.current !== null) {
-      window.grecaptcha.reset(captchaWidgetIdRef.current);
+    if (!window.grecaptcha || !accessState.captchaSiteKey) {
+      throw new Error('Le service captcha n est pas encore pret. Veuillez reessayer dans quelques secondes.');
     }
+
+    return window.grecaptcha.execute(accessState.captchaSiteKey, { action: captchaAction });
   };
 
   const handleInvitationRequest = async () => {
@@ -390,8 +391,8 @@ function App() {
       return;
     }
 
-    if (requiresCaptcha && !captchaToken) {
-      setConnectionError('Veuillez valider le captcha avant d envoyer votre demande.');
+    if (requiresCaptcha && !captchaReady) {
+      setConnectionError('Le captcha est en cours de chargement. Veuillez reessayer dans quelques secondes.');
       return;
     }
 
@@ -400,13 +401,12 @@ function App() {
     setAccessStatusMessage(null);
 
     try {
-      const result = await requestRecruiterInvitation(inviteEmail.trim(), captchaToken ?? undefined);
+      const captchaToken = await createCaptchaToken();
+      const result = await requestRecruiterInvitation(inviteEmail.trim(), captchaToken);
       setInviteRequestMessage(result.message);
       setInviteEmail('');
-      resetCaptcha();
     } catch (error) {
       setConnectionError(error instanceof Error ? error.message : 'Erreur inconnue');
-      resetCaptcha();
     } finally {
       setIsSubmittingInvite(false);
     }
@@ -559,7 +559,11 @@ function App() {
                 />
                 {requiresCaptcha && accessState.requestInvitationEnabled && (
                   <div className="flex justify-center">
-                    <div ref={captchaContainerRef} />
+                    {requiresCaptcha && !captchaReady && (
+                      <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-muted)]">
+                        Initialisation de la protection captcha...
+                      </p>
+                    )}
                   </div>
                 )}
                 {inviteRequestMessage && (

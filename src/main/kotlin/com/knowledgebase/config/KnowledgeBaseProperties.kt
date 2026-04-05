@@ -106,12 +106,16 @@ data class KnowledgeBaseProperties(
         ) {
             data class Recaptcha(
                 val secretKey: String = "",
-                val verifyUrl: String = "https://www.google.com/recaptcha/api/siteverify"
+                val verifyUrl: String = "https://www.google.com/recaptcha/api/siteverify",
+                @field:jakarta.validation.constraints.DecimalMin("0.0")
+                @field:jakarta.validation.constraints.DecimalMax("1.0")
+                val minimumScore: Double = 0.5,
+                val action: String = "request_invitation"
             )
 
             enum class Provider {
                 NONE,
-                RECAPTCHA
+                RECAPTCHA_V3
             }
         }
 

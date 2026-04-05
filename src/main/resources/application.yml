@@ -143,6 +143,8 @@ knowledgebase:
       recaptcha:
         secret-key: ${RECRUITER_ACCESS_CAPTCHA_RECAPTCHA_SECRET_KEY:}
         verify-url: ${RECRUITER_ACCESS_CAPTCHA_RECAPTCHA_VERIFY_URL:https://www.google.com/recaptcha/api/siteverify}
+        minimum-score: ${RECRUITER_ACCESS_CAPTCHA_RECAPTCHA_MINIMUM_SCORE:0.5}
+        action: ${RECRUITER_ACCESS_CAPTCHA_RECAPTCHA_ACTION:request_invitation}
     rate-limit:
       max-requests-per-ip: 5
       max-requests-per-email: 3

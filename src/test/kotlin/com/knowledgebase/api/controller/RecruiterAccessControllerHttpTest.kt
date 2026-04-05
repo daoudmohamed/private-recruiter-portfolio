@@ -17,14 +17,22 @@ import org.springframework.ai.vectorstore.VectorStore
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.http.HttpStatus
-import org.springframework.http.ResponseCookie
 import org.springframework.http.MediaType
+import org.springframework.http.ResponseCookie
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.reactive.server.WebTestClient
+import java.time.Instant
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = ["knowledgebase.recruiter-access.frontend-base-url=http://localhost:5173"]
+    properties = [
+        "knowledgebase.recruiter-access.enabled=true",
+        "knowledgebase.recruiter-access.request-invitation-enabled=true",
+        "knowledgebase.recruiter-access.frontend-base-url=http://localhost:5173",
+        "knowledgebase.recruiter-access.captcha.provider=RECAPTCHA_V3",
+        "knowledgebase.recruiter-access.captcha.site-key=test-site-key",
+        "knowledgebase.recruiter-access.captcha.recaptcha.action=request_invitation"
+    ]
 )
 @ActiveProfiles("test")
 class RecruiterAccessControllerHttpTest {
@@ -113,5 +121,41 @@ class RecruiterAccessControllerHttpTest {
             .expectStatus().isOk
             .expectBody()
             .jsonPath("$.success").value<Boolean> { assertTrue(it) }
+    }
+
+    @Test
+    fun `session should expose recaptcha v3 action metadata`() {
+        webTestClient.get()
+            .uri("/api/v1/recruiter-access/session")
+            .exchange()
+            .expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.captchaSiteKey").isEqualTo("test-site-key")
+            .jsonPath("$.captchaAction").isEqualTo("request_invitation")
+    }
+
+    @Test
+    fun `consume should expose recaptcha v3 action metadata`() {
+        coEvery { recruiterInvitationService.consumeInvitation("valid-token") } returns com.knowledgebase.domain.model.RecruiterAccessSession(
+            id = "session-1",
+            email = "recruteur@example.com",
+            invitationId = "invite-1",
+            expiresAt = Instant.parse("2026-04-06T12:00:00Z")
+        )
+        coEvery { recruiterAccessSessionService.createSessionCookie(any()) } returns ResponseCookie.from("kb_recruiter_session", "session-1")
+            .httpOnly(true)
+            .path("/")
+            .build()
+
+        webTestClient.post()
+            .uri("/api/v1/recruiter-access/consume")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue("""{"token":"valid-token"}""")
+            .exchange()
+            .expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.authenticated").isEqualTo(true)
+            .jsonPath("$.captchaSiteKey").isEqualTo("test-site-key")
+            .jsonPath("$.captchaAction").isEqualTo("request_invitation")
     }
 }

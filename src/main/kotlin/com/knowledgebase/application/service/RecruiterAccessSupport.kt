@@ -428,7 +428,7 @@ class GoogleCaptchaVerificationService(
 
         return when (captchaConfig.provider) {
             KnowledgeBaseProperties.RecruiterAccess.Captcha.Provider.NONE -> true
-            KnowledgeBaseProperties.RecruiterAccess.Captcha.Provider.RECAPTCHA -> verifyRecaptcha(captchaToken, remoteIp)
+            KnowledgeBaseProperties.RecruiterAccess.Captcha.Provider.RECAPTCHA_V3 -> verifyRecaptcha(captchaToken, remoteIp)
         }
     }
 
@@ -449,7 +449,7 @@ class GoogleCaptchaVerificationService(
             .bodyToMono(RecaptchaVerificationResponse::class.java)
             .awaitSingle()
 
-        return response.success
+        return response.isAccepted(captchaConfig.recaptcha)
     }
 }
 
@@ -458,9 +458,25 @@ data class InvitationRequestResult(
     val message: String
 )
 
-private data class RecaptchaVerificationResponse(
-    val success: Boolean = false
+internal data class RecaptchaVerificationResponse(
+    val success: Boolean = false,
+    val score: Double? = null,
+    val action: String? = null
 )
+
+internal fun RecaptchaVerificationResponse.isAccepted(config: KnowledgeBaseProperties.RecruiterAccess.Captcha.Recaptcha): Boolean {
+    if (!success) {
+        return false
+    }
+
+    val responseAction = action?.trim()
+    if (responseAction.isNullOrEmpty() || responseAction != config.action) {
+        return false
+    }
+
+    val responseScore = score ?: return false
+    return responseScore >= config.minimumScore
+}
 
 private val EMAIL_REGEX = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
 

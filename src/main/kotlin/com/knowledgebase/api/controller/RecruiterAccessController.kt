@@ -86,6 +86,7 @@ class RecruiterAccessController(
             authenticated = true,
             requestInvitationEnabled = knowledgeBaseProperties.recruiterAccess.requestInvitationEnabled,
             captchaSiteKey = knowledgeBaseProperties.recruiterAccess.captcha.siteKey.ifBlank { null },
+            captchaAction = knowledgeBaseProperties.recruiterAccess.captcha.recaptcha.action.ifBlank { null },
             expiresAt = session.expiresAt
         )
     }
@@ -110,6 +111,7 @@ class RecruiterAccessController(
             authenticated = session != null,
             requestInvitationEnabled = knowledgeBaseProperties.recruiterAccess.requestInvitationEnabled,
             captchaSiteKey = knowledgeBaseProperties.recruiterAccess.captcha.siteKey.ifBlank { null },
+            captchaAction = knowledgeBaseProperties.recruiterAccess.captcha.recaptcha.action.ifBlank { null },
             expiresAt = session?.expiresAt
         )
     }
