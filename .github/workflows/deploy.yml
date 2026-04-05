@@ -163,6 +163,7 @@ jobs:
             > "$RUNNER_TEMP/rendered.yaml"
 
       - name: Validate rendered manifests
+        if: ${{ !inputs.dry_run }}
         run: |
           kubectl apply --dry-run=client --validate=false -f "$RUNNER_TEMP/rendered.yaml"
 
