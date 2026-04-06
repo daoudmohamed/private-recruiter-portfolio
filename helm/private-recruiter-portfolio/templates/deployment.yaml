@@ -14,6 +14,7 @@ spec:
       labels:
         {{- include "private-recruiter-portfolio.selectorLabels" . | nindent 8 }}
       annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         {{- toYaml .Values.podAnnotations | nindent 8 }}
     spec:
       serviceAccountName: {{ include "private-recruiter-portfolio.serviceAccountName" . }}
