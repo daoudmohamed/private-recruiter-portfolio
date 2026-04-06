@@ -351,10 +351,12 @@ function App() {
       return;
     }
 
+    const recaptcha = globalThis.grecaptcha;
+
     const existingScript = document.querySelector<HTMLScriptElement>('script[data-recaptcha="true"]');
     if (existingScript) {
-      if (window.grecaptcha) {
-        window.grecaptcha.ready(() => setCaptchaReady(true));
+      if (recaptcha) {
+        recaptcha.ready(() => setCaptchaReady(true));
       }
       return;
     }
@@ -365,8 +367,8 @@ function App() {
     script.defer = true;
     script.dataset.recaptcha = 'true';
     script.onload = () => {
-      if (window.grecaptcha) {
-        window.grecaptcha.ready(() => setCaptchaReady(true));
+      if (globalThis.grecaptcha) {
+        globalThis.grecaptcha.ready(() => setCaptchaReady(true));
       }
     };
     document.body.appendChild(script);
@@ -377,11 +379,11 @@ function App() {
       return undefined;
     }
 
-    if (!window.grecaptcha || !accessState.captchaSiteKey) {
+    if (!globalThis.grecaptcha || !accessState.captchaSiteKey) {
       throw new Error('Le service captcha n est pas encore pret. Veuillez reessayer dans quelques secondes.');
     }
 
-    return window.grecaptcha.execute(accessState.captchaSiteKey, { action: captchaAction });
+    return globalThis.grecaptcha.execute(accessState.captchaSiteKey, { action: captchaAction });
   };
 
   const handleInvitationRequest = async () => {
