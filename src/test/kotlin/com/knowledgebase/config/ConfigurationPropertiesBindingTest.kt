@@ -33,10 +33,12 @@ class ConfigurationPropertiesBindingTest {
                 "knowledgebase.recruiter-access.cookie-name=recruiter_session",
                 "knowledgebase.recruiter-access.frontend-base-url=https://portfolio.example.com",
                 "knowledgebase.recruiter-access.token-secret=super-secret",
-                "knowledgebase.recruiter-access.captcha.provider=RECAPTCHA",
+                "knowledgebase.recruiter-access.captcha.provider=RECAPTCHA_V3",
                 "knowledgebase.recruiter-access.captcha.site-key=site-key",
                 "knowledgebase.recruiter-access.captcha.verify-enabled=false",
                 "knowledgebase.recruiter-access.captcha.recaptcha.secret-key=captcha-secret",
+                "knowledgebase.recruiter-access.captcha.recaptcha.minimum-score=0.7",
+                "knowledgebase.recruiter-access.captcha.recaptcha.action=request_invitation",
                 "knowledgebase.recruiter-access.rate-limit.max-requests-per-ip=7",
                 "knowledgebase.recruiter-access.rate-limit.max-requests-per-email=4",
                 "knowledgebase.recruiter-access.rate-limit.window-minutes=30",
@@ -73,10 +75,12 @@ class ConfigurationPropertiesBindingTest {
                 assertThat(properties.recruiterAccess.cookieName).isEqualTo("recruiter_session")
                 assertThat(properties.recruiterAccess.frontendBaseUrl).isEqualTo("https://portfolio.example.com")
                 assertThat(properties.recruiterAccess.tokenSecret).isEqualTo("super-secret")
-                assertThat(properties.recruiterAccess.captcha.provider).isEqualTo(KnowledgeBaseProperties.RecruiterAccess.Captcha.Provider.RECAPTCHA)
+                assertThat(properties.recruiterAccess.captcha.provider).isEqualTo(KnowledgeBaseProperties.RecruiterAccess.Captcha.Provider.RECAPTCHA_V3)
                 assertThat(properties.recruiterAccess.captcha.siteKey).isEqualTo("site-key")
                 assertThat(properties.recruiterAccess.captcha.verifyEnabled).isFalse()
                 assertThat(properties.recruiterAccess.captcha.recaptcha.secretKey).isEqualTo("captcha-secret")
+                assertThat(properties.recruiterAccess.captcha.recaptcha.minimumScore).isEqualTo(0.7)
+                assertThat(properties.recruiterAccess.captcha.recaptcha.action).isEqualTo("request_invitation")
                 assertThat(properties.recruiterAccess.rateLimit.maxRequestsPerIp).isEqualTo(7)
                 assertThat(properties.recruiterAccess.rateLimit.maxRequestsPerEmail).isEqualTo(4)
                 assertThat(properties.recruiterAccess.rateLimit.windowMinutes).isEqualTo(30)

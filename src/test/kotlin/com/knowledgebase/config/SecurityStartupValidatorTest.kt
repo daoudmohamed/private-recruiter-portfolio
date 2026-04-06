@@ -68,14 +68,76 @@ class SecurityStartupValidatorTest {
                 "knowledgebase.recruiter-access.token-secret=super-secret",
                 "knowledgebase.recruiter-access.frontend-base-url=https://portfolio.example.com",
                 "knowledgebase.recruiter-access.request-invitation-enabled=true",
-                "knowledgebase.recruiter-access.captcha.provider=RECAPTCHA",
+                "knowledgebase.recruiter-access.captcha.provider=RECAPTCHA_V3",
                 "knowledgebase.recruiter-access.captcha.verify-enabled=true"
             )
             .run { context ->
                 assertThat(context.startupFailure).isNotNull
                 assertThat(context.startupFailure)
                     .hasRootCauseInstanceOf(IllegalStateException::class.java)
-                    .hasStackTraceContaining("knowledgebase.recruiter-access.captcha.recaptcha.secret-key")
+                    .hasStackTraceContaining("knowledgebase.recruiter-access.captcha.site-key")
+            }
+    }
+
+    @Test
+    fun `should fail when public invitation requests require recaptcha without action`() {
+        contextRunner
+            .withPropertyValues(
+                "knowledgebase.security.admin-api-key=secret-key",
+                "knowledgebase.recruiter-access.enabled=true",
+                "knowledgebase.recruiter-access.token-secret=super-secret",
+                "knowledgebase.recruiter-access.frontend-base-url=https://portfolio.example.com",
+                "knowledgebase.recruiter-access.request-invitation-enabled=true",
+                "knowledgebase.recruiter-access.captcha.provider=RECAPTCHA_V3",
+                "knowledgebase.recruiter-access.captcha.site-key=site-key",
+                "knowledgebase.recruiter-access.captcha.verify-enabled=true",
+                "knowledgebase.recruiter-access.captcha.recaptcha.secret-key=captcha-secret",
+                "knowledgebase.recruiter-access.captcha.recaptcha.action="
+            )
+            .run { context ->
+                assertThat(context.startupFailure).isNotNull
+                assertThat(context.startupFailure)
+                    .hasRootCauseInstanceOf(IllegalStateException::class.java)
+                    .hasStackTraceContaining("knowledgebase.recruiter-access.captcha.recaptcha.action")
+            }
+    }
+
+    @Test
+    fun `should allow startup with complete recaptcha v3 configuration`() {
+        contextRunner
+            .withPropertyValues(
+                "knowledgebase.security.admin-api-key=secret-key",
+                "knowledgebase.recruiter-access.enabled=true",
+                "knowledgebase.recruiter-access.token-secret=super-secret",
+                "knowledgebase.recruiter-access.frontend-base-url=https://portfolio.example.com",
+                "knowledgebase.recruiter-access.request-invitation-enabled=true",
+                "knowledgebase.recruiter-access.captcha.provider=RECAPTCHA_V3",
+                "knowledgebase.recruiter-access.captcha.site-key=site-key",
+                "knowledgebase.recruiter-access.captcha.verify-enabled=true",
+                "knowledgebase.recruiter-access.captcha.recaptcha.secret-key=captcha-secret",
+                "knowledgebase.recruiter-access.captcha.recaptcha.action=request_invitation"
+            )
+            .run { context ->
+                assertThat(context.startupFailure).isNull()
+                assertThat(context).hasSingleBean(SecurityStartupValidator::class.java)
+            }
+    }
+
+    @Test
+    fun `should allow startup when captcha verification is disabled`() {
+        contextRunner
+            .withPropertyValues(
+                "knowledgebase.security.admin-api-key=secret-key",
+                "knowledgebase.recruiter-access.enabled=true",
+                "knowledgebase.recruiter-access.token-secret=super-secret",
+                "knowledgebase.recruiter-access.frontend-base-url=https://portfolio.example.com",
+                "knowledgebase.recruiter-access.request-invitation-enabled=true",
+                "knowledgebase.recruiter-access.captcha.provider=RECAPTCHA_V3",
+                "knowledgebase.recruiter-access.captcha.verify-enabled=false"
+            )
+            .run { context ->
+                assertThat(context.startupFailure).isNull()
+                assertThat(context).hasSingleBean(SecurityStartupValidator::class.java)
             }
     }
 

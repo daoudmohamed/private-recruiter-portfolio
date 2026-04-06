@@ -34,7 +34,7 @@ knowledgebase:
     frontend-base-url: ${FRONTEND_BASE_URL}
     token-secret: ${RECRUITER_ACCESS_TOKEN_SECRET}
     captcha:
-      provider: RECAPTCHA
+      provider: RECAPTCHA_V3
       site-key: ${RECRUITER_ACCESS_CAPTCHA_SITE_KEY}
       verify-enabled: true
       recaptcha:

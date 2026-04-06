@@ -16,6 +16,7 @@ export interface RecruiterAccessSessionResponse {
   authenticated: boolean
   requestInvitationEnabled: boolean
   captchaSiteKey?: string
+  captchaAction?: string
   expiresAt?: string
 }
 

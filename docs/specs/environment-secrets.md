@@ -21,18 +21,20 @@ This document lists the runtime configuration expected by the application and se
 - `FRONTEND_ORIGIN`
 - `RECRUITER_ACCESS_TOKEN_SECRET`
 - `RECRUITER_ACCESS_FROM_EMAIL`
-- `RECRUITER_ACCESS_FROM_NAME` or default accepted
+- `RECRUITER_ACCESS_FROM_NAME`
+- `RECRUITER_ACCESS_REPLY_TO`
 
 ### Brevo
 
 - `BREVO_API_KEY`
 - `BREVO_TEMPLATE_ID`
-- `RECRUITER_ACCESS_REPLY_TO` if distinct from sender
 
 ### Captcha for production
 
 - `RECRUITER_ACCESS_CAPTCHA_SITE_KEY`
+  fournie par l'environnement GitHub `production` au deploy Helm
 - `RECRUITER_ACCESS_CAPTCHA_RECAPTCHA_SECRET_KEY`
+  stockee comme secret et injectee dans `mutuelle-secrets`
 
 ## 3. Recommended for Production
 
@@ -48,6 +50,10 @@ This document lists the runtime configuration expected by the application and se
 - `RECRUITER_ACCESS_CAPTCHA_PROVIDER`
 - `RECRUITER_ACCESS_CAPTCHA_VERIFY_ENABLED`
 - `RECRUITER_ACCESS_CAPTCHA_RECAPTCHA_VERIFY_URL`
+
+Current supported explicit value for `RECRUITER_ACCESS_CAPTCHA_PROVIDER`:
+
+- `RECAPTCHA_V3`
 
 ## 5. Derived from Current Config
 

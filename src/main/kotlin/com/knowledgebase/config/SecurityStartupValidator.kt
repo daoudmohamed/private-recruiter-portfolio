@@ -61,9 +61,11 @@ class SecurityStartupValidator(
 
         if (recruiterAccess.requestInvitationEnabled &&
             recruiterAccess.captcha.verifyEnabled &&
-            recruiterAccess.captcha.provider == KnowledgeBaseProperties.RecruiterAccess.Captcha.Provider.RECAPTCHA
+            recruiterAccess.captcha.provider == KnowledgeBaseProperties.RecruiterAccess.Captcha.Provider.RECAPTCHA_V3
         ) {
+            requireNotBlank(recruiterAccess.captcha.siteKey, "knowledgebase.recruiter-access.captcha.site-key")
             requireNotBlank(recruiterAccess.captcha.recaptcha.secretKey, "knowledgebase.recruiter-access.captcha.recaptcha.secret-key")
+            requireNotBlank(recruiterAccess.captcha.recaptcha.action, "knowledgebase.recruiter-access.captcha.recaptcha.action")
         }
     }
 
