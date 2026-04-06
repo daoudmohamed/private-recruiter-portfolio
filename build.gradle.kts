@@ -144,10 +144,13 @@ sonar {
         property("sonar.sourceEncoding", "UTF-8")
         property("sonar.sources", "src/main,frontend/src")
         property("sonar.tests", "src/test,frontend/src")
-        property("sonar.test.inclusions", "src/test/**/*,frontend/src/**/*.test.ts,frontend/src/**/*.spec.ts")
+        property(
+            "sonar.test.inclusions",
+            "src/test/**/*,frontend/src/**/*.test.ts,frontend/src/**/*.test.tsx,frontend/src/**/*.spec.ts,frontend/src/**/*.spec.tsx"
+        )
         property(
             "sonar.exclusions",
-            "frontend/dist/**,frontend/node_modules/**,build/**,**/*.min.js,**/generated/**"
+            "frontend/dist/**,frontend/node_modules/**,frontend/coverage/**,frontend/src/**/*.test.ts,frontend/src/**/*.test.tsx,frontend/src/**/*.spec.ts,frontend/src/**/*.spec.tsx,build/**,**/*.min.js,**/generated/**"
         )
         property("sonar.java.binaries", "build/classes")
         property("sonar.coverage.jacoco.xmlReportPaths", "build/reports/jacoco/test/jacocoTestReport.xml")
