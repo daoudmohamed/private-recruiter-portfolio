@@ -21,13 +21,13 @@ This document lists the runtime configuration expected by the application and se
 - `FRONTEND_ORIGIN`
 - `RECRUITER_ACCESS_TOKEN_SECRET`
 - `RECRUITER_ACCESS_FROM_EMAIL`
-- `RECRUITER_ACCESS_FROM_NAME` or default accepted
+- `RECRUITER_ACCESS_FROM_NAME`
+- `RECRUITER_ACCESS_REPLY_TO`
 
 ### Brevo
 
 - `BREVO_API_KEY`
 - `BREVO_TEMPLATE_ID`
-- `RECRUITER_ACCESS_REPLY_TO` if distinct from sender
 
 ### Captcha for production
 

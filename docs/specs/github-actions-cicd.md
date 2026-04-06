@@ -110,6 +110,14 @@ Reference:
   nom du secret TLS Kubernetes utilise par l'Ingress, par exemple `portfolio-example-com-tls`
 - `RECRUITER_ACCESS_CAPTCHA_SITE_KEY`
   site key reCAPTCHA v3 injectee dans Helm au moment du deploy. Valeur publique, mais sortie du repo pour garder la prod entierement pilotee par l'environnement GitHub.
+- `RECRUITER_ACCESS_FROM_EMAIL`
+  adresse expediteur injectee dans Helm pour les emails recruteur
+- `RECRUITER_ACCESS_FROM_NAME`
+  nom expediteur injecte dans Helm pour les emails recruteur
+- `RECRUITER_ACCESS_REPLY_TO`
+  adresse reply-to injectee dans Helm pour les emails recruteur
+- `BREVO_TEMPLATE_ID`
+  template Brevo injecte dans Helm pour les emails recruteur
 
 ### Optionnels pour l'analyse securite
 - `SONAR_TOKEN`
@@ -155,6 +163,7 @@ Modele retenu:
 - les tags Tailscale demandes par le runner sont injectes via `TS_TAGS` dans l'environnement GitHub `production`
 - les vraies valeurs publiques d'Ingress (`PUBLIC_HOST`, `PUBLIC_BASE_URL`, `TLS_SECRET_NAME`) sont injectees par l'environnement GitHub `production`, pas hardcodees dans le repo
 - la `site key` reCAPTCHA v3 (`RECRUITER_ACCESS_CAPTCHA_SITE_KEY`) est aussi injectee par l'environnement GitHub `production`, pas versionnee dans les values Helm de prod
+- les valeurs email recruteur (`RECRUITER_ACCESS_FROM_EMAIL`, `RECRUITER_ACCESS_FROM_NAME`, `RECRUITER_ACCESS_REPLY_TO`, `BREVO_TEMPLATE_ID`) sont egalement injectees par l'environnement GitHub `production`, pas versionnees dans les values Helm de prod
 - si `TLS_CERT_PEM` et `TLS_KEY_PEM` sont presents, le workflow cree ou met a jour automatiquement le secret TLS Kubernetes reference par `TLS_SECRET_NAME`
 - le workflow cree ou met a jour automatiquement le secret applicatif `mutuelle-secrets` depuis les secrets GitHub `production`
 - le workflow applique aussi `k8s/services/production-k3s` pour provisionner `redis-prod` et `qdrant-prod` avec PVC avant le deploiement de l'application
