@@ -32,7 +32,9 @@ This document lists the runtime configuration expected by the application and se
 ### Captcha for production
 
 - `RECRUITER_ACCESS_CAPTCHA_SITE_KEY`
+  fournie par l'environnement GitHub `production` au deploy Helm
 - `RECRUITER_ACCESS_CAPTCHA_RECAPTCHA_SECRET_KEY`
+  stockee comme secret et injectee dans `mutuelle-secrets`
 
 ## 3. Recommended for Production
 

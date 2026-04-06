@@ -124,6 +124,24 @@ class SecurityStartupValidatorTest {
     }
 
     @Test
+    fun `should allow startup when captcha verification is disabled`() {
+        contextRunner
+            .withPropertyValues(
+                "knowledgebase.security.admin-api-key=secret-key",
+                "knowledgebase.recruiter-access.enabled=true",
+                "knowledgebase.recruiter-access.token-secret=super-secret",
+                "knowledgebase.recruiter-access.frontend-base-url=https://portfolio.example.com",
+                "knowledgebase.recruiter-access.request-invitation-enabled=true",
+                "knowledgebase.recruiter-access.captcha.provider=RECAPTCHA_V3",
+                "knowledgebase.recruiter-access.captcha.verify-enabled=false"
+            )
+            .run { context ->
+                assertThat(context.startupFailure).isNull()
+                assertThat(context).hasSingleBean(SecurityStartupValidator::class.java)
+            }
+    }
+
+    @Test
     fun `should fail when recruiter access email provider is brevo without template id`() {
         contextRunner
             .withPropertyValues(

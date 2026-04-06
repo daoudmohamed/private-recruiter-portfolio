@@ -47,6 +47,39 @@ class GoogleCaptchaVerificationServiceTest {
     }
 
     @Test
+    fun `should reject recaptcha response when provider marks verification as unsuccessful`() {
+        val response = RecaptchaVerificationResponse(
+            success = false,
+            score = 0.9,
+            action = "request_invitation"
+        )
+
+        assertThat(response.isAccepted(recaptchaConfig)).isFalse()
+    }
+
+    @Test
+    fun `should reject recaptcha response when score is missing`() {
+        val response = RecaptchaVerificationResponse(
+            success = true,
+            score = null,
+            action = "request_invitation"
+        )
+
+        assertThat(response.isAccepted(recaptchaConfig)).isFalse()
+    }
+
+    @Test
+    fun `should reject recaptcha response when action is blank`() {
+        val response = RecaptchaVerificationResponse(
+            success = true,
+            score = 0.9,
+            action = " "
+        )
+
+        assertThat(response.isAccepted(recaptchaConfig)).isFalse()
+    }
+
+    @Test
     fun `should bypass verification when captcha provider is none`() {
         val service = GoogleCaptchaVerificationService(
             KnowledgeBaseProperties(

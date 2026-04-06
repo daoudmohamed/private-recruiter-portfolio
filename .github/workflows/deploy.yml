@@ -53,6 +53,7 @@ jobs:
           PUBLIC_HOST: ${{ vars.PUBLIC_HOST }}
           PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
           TLS_SECRET_NAME: ${{ vars.TLS_SECRET_NAME }}
+          RECRUITER_ACCESS_CAPTCHA_SITE_KEY: ${{ vars.RECRUITER_ACCESS_CAPTCHA_SITE_KEY }}
         run: |
           if [ -z "$TS_OAUTH_CLIENT_ID" ] || [ -z "$TS_OAUTH_SECRET" ]; then
             echo "TS_OAUTH_CLIENT_ID and TS_OAUTH_SECRET must be configured in the production environment" >&2
@@ -71,6 +72,11 @@ jobs:
 
           if [ -z "$PUBLIC_HOST" ] || [ -z "$PUBLIC_BASE_URL" ] || [ -z "$TLS_SECRET_NAME" ]; then
             echo "PUBLIC_HOST, PUBLIC_BASE_URL, and TLS_SECRET_NAME must be configured in the production environment" >&2
+            exit 1
+          fi
+
+          if [ -z "$RECRUITER_ACCESS_CAPTCHA_SITE_KEY" ]; then
+            echo "RECRUITER_ACCESS_CAPTCHA_SITE_KEY must be configured in the production environment" >&2
             exit 1
           fi
 
@@ -99,6 +105,7 @@ jobs:
           echo "public_host=${{ vars.PUBLIC_HOST }}" >> "$GITHUB_OUTPUT"
           echo "public_base_url=${{ vars.PUBLIC_BASE_URL }}" >> "$GITHUB_OUTPUT"
           echo "tls_secret_name=${{ vars.TLS_SECRET_NAME }}" >> "$GITHUB_OUTPUT"
+          echo "captcha_site_key=${{ vars.RECRUITER_ACCESS_CAPTCHA_SITE_KEY }}" >> "$GITHUB_OUTPUT"
 
       - name: Write kubeconfig
         if: ${{ !inputs.dry_run }}
@@ -204,6 +211,7 @@ jobs:
             --set ingress.tls.secretName="${{ steps.prep.outputs.tls_secret_name }}" \
             --set frontend.baseUrl="${{ steps.prep.outputs.public_base_url }}" \
             --set frontend.origin="${{ steps.prep.outputs.public_base_url }}" \
+            --set recruiterAccess.captcha.siteKey="${{ steps.prep.outputs.captcha_site_key }}" \
             > "$RUNNER_TEMP/rendered.yaml"
 
       - name: Validate rendered manifests
@@ -223,7 +231,8 @@ jobs:
             --set ingress.host="${{ steps.prep.outputs.public_host }}" \
             --set ingress.tls.secretName="${{ steps.prep.outputs.tls_secret_name }}" \
             --set frontend.baseUrl="${{ steps.prep.outputs.public_base_url }}" \
-            --set frontend.origin="${{ steps.prep.outputs.public_base_url }}"
+            --set frontend.origin="${{ steps.prep.outputs.public_base_url }}" \
+            --set recruiterAccess.captcha.siteKey="${{ steps.prep.outputs.captcha_site_key }}"
 
           kubectl rollout status deployment/${{ steps.prep.outputs.deployment }} \
             --namespace "${{ steps.prep.outputs.namespace }}" \

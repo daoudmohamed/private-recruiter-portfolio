@@ -121,4 +121,38 @@ describe('App recruiter captcha flow', () => {
       expect(apiMocks.requestRecruiterInvitation).toHaveBeenCalledWith('recruteur@example.com', 'captcha-token')
     })
   })
+
+  it('loads the recaptcha script and surfaces a readiness error if recaptcha disappears before submit', async () => {
+    apiMocks.getRecruiterAccessSession.mockResolvedValue({
+      enabled: true,
+      authenticated: false,
+      requestInvitationEnabled: true,
+      captchaSiteKey: 'site-key',
+      captchaAction: 'request_invitation',
+    })
+
+    window.grecaptcha = {
+      ready: (callback: () => void) => {
+        callback()
+        window.grecaptcha = undefined
+      },
+      execute: vi.fn(),
+    }
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(document.querySelector('script[data-recaptcha="true"]')).not.toBeNull()
+    })
+    const script = document.querySelector('script[data-recaptcha="true"]') as HTMLScriptElement
+    expect(script.src).toContain('https://www.google.com/recaptcha/api.js?render=site-key')
+    script.onload?.(new Event('load'))
+
+    const emailInput = await screen.findByPlaceholderText('prenom.nom@entreprise.com')
+    fireEvent.change(emailInput, { target: { value: 'recruteur@example.com' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Recevoir mon invitation' }))
+
+    expect(await screen.findByText('Le service captcha n est pas encore pret. Veuillez reessayer dans quelques secondes.')).toBeTruthy()
+    expect(apiMocks.requestRecruiterInvitation).not.toHaveBeenCalled()
+  })
 })
