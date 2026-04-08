@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import App from './App'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -146,7 +146,9 @@ describe('App recruiter captcha flow', () => {
     })
     const script = document.querySelector('script[data-recaptcha="true"]') as HTMLScriptElement
     expect(script.src).toContain('https://www.google.com/recaptcha/api.js?render=site-key')
-    script.onload?.(new Event('load'))
+    await act(async () => {
+      script.onload?.(new Event('load'))
+    })
 
     const emailInput = await screen.findByPlaceholderText('prenom.nom@entreprise.com')
     fireEvent.change(emailInput, { target: { value: 'recruteur@example.com' } })
