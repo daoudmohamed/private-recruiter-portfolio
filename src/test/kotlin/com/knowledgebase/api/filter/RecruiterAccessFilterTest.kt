@@ -105,6 +105,34 @@ class RecruiterAccessFilterTest {
         assertThat(exchange.response.statusCode).isNull()
     }
 
+    @Test
+    fun `should allow public branding assets without recruiter session`() {
+        val sessionService = mockk<RecruiterAccessSessionService>()
+        val filter = RecruiterAccessFilter(
+            KnowledgeBaseProperties(
+                security = KnowledgeBaseProperties.Security(),
+                recruiterAccess = KnowledgeBaseProperties.RecruiterAccess(
+                    enabled = true,
+                    tokenSecret = "secret"
+                )
+            ),
+            sessionService
+        )
+
+        val faviconExchange = MockServerWebExchange.from(MockServerHttpRequest.get("/favicon.svg").build())
+        val brandMarkExchange = MockServerWebExchange.from(MockServerHttpRequest.get("/brand-mark.svg").build())
+        val faviconChain = RecordingChain()
+        val brandMarkChain = RecordingChain()
+
+        filter.filter(faviconExchange, faviconChain).block()
+        filter.filter(brandMarkExchange, brandMarkChain).block()
+
+        assertThat(faviconChain.called).isTrue()
+        assertThat(brandMarkChain.called).isTrue()
+        assertThat(faviconExchange.response.statusCode).isNull()
+        assertThat(brandMarkExchange.response.statusCode).isNull()
+    }
+
     private class RecordingChain : WebFilterChain {
         var called: Boolean = false
 

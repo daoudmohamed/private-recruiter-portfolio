@@ -35,6 +35,8 @@ data class KnowledgeBaseProperties(
             "/index.html",
             "/vite.svg",
             "/favicon.ico",
+            "/favicon.svg",
+            "/brand-mark.svg",
             "/assets/**",
             "/access",
             "/access/**",
