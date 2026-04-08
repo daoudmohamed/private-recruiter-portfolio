@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, AlertCircle, Database, Github, Linkedin, Mail, Briefcase, Code, Cpu, Globe, LockKeyhole, LogOut, RefreshCcw, ArrowRight, BadgeCheck, ShieldCheck, MessageSquareMore, Moon, Sun } from 'lucide-react';
+import { X, AlertCircle, Github, Linkedin, Mail, Briefcase, Code, Cpu, Globe, LockKeyhole, LogOut, RefreshCcw, ArrowRight, BadgeCheck, ShieldCheck, MessageSquareMore, Moon, Sun } from 'lucide-react';
 import ChatWindow from './components/ChatWindow';
 import ErrorBoundary from './components/ErrorBoundary';
 import { SkillsSection } from './components/sections/SkillsSection';
@@ -434,9 +434,11 @@ function App() {
       <nav className="theme-nav fixed top-0 w-full z-50 border-b backdrop-blur-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-16 py-2 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-bold text-white">
-              <Database className="w-4 h-4" />
-            </div>
+            <img
+              src="/brand-mark.svg"
+              alt="Monogramme Mohamed Daoud"
+              className="w-8 h-8 rounded-lg shadow-[0_10px_30px_rgba(8,145,178,0.28)]"
+            />
             <div>
               <div className="theme-brand-gradient font-semibold text-sm md:text-base tracking-tight bg-clip-text text-transparent">
                 Mohamed Daoud
