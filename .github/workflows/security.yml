@@ -61,7 +61,7 @@ jobs:
       - name: Build Java sources
         run: |
           chmod +x ./gradlew
-          ./gradlew classes testClasses --no-daemon
+          ./gradlew clean classes testClasses --no-daemon --rerun-tasks
 
       - name: Analyze
         uses: github/codeql-action/analyze@v4
