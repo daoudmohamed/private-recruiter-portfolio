@@ -7,6 +7,121 @@ import { SkillsSection } from '../../../components/sections/SkillsSection'
 import type { Message } from '../../../utils/security'
 import { credibilitySignals, recruiterSummary } from '../content'
 
+type LabelValueItem = {
+  label: string
+  value: string
+}
+
+type MetricItem = LabelValueItem & {
+  hint: string
+}
+
+type TitleTextItem = {
+  title: string
+  text: string
+}
+
+const keyReferenceItems: LabelValueItem[] = [
+  { label: 'Poste recent', value: 'Tech Lead Backend & Mobile' },
+  { label: 'Secteurs', value: 'Banque, assurance, paiements' },
+  { label: 'Stack dominante', value: 'Java, Spring Boot, Kotlin, Kubernetes' },
+  { label: 'Differenciateurs', value: 'Microservices, securite, delivery, leadership technique' },
+]
+
+const overviewMetrics: MetricItem[] = [
+  { label: 'Experience', value: '8+ ans', hint: 'Backend, mobile, delivery' },
+  { label: 'Secteurs', value: '3 domaines', hint: 'Banque, assurance, paiements' },
+  { label: 'Role recent', value: 'Tech Lead', hint: 'Backend et mobile' },
+  { label: 'Valeur rapide', value: 'CV lisible', hint: 'Chat pour approfondir' },
+]
+
+const chatPreparationItems = [
+  'Verifier une experience recente',
+  'Comparer le profil a un poste cible',
+  'Creuser la stack ou l architecture',
+  'Obtenir un resume factuel en quelques lignes',
+]
+
+const contributionTopics: TitleTextItem[] = [
+  {
+    title: 'Prendre ou reprendre un backend Spring Boot',
+    text: 'Stabilisation, evolution, reduction de dette technique, cadrage d architecture et remise a niveau de la qualite.',
+  },
+  {
+    title: 'Tenir un role de Tech Lead Backend',
+    text: 'Arbitrages techniques, accompagnement d equipe, coordination delivery et mise en place de standards pragmatiques.',
+  },
+  {
+    title: 'Intervenir sur des contextes regulés ou sensibles',
+    text: 'Banque, assurance, paiements ou SI critiques avec exigences de securite, fiabilite et maintenabilite.',
+  },
+  {
+    title: 'Aider sur la production et la robustesse',
+    text: 'Incidents, observabilite, supervision, BFF, microservices, CI/CD et hygiene technique.',
+  },
+]
+
+const targetRoleItems: TitleTextItem[] = [
+  {
+    title: 'Tech Lead Backend',
+    text: 'Pour tenir un role melant execution, arbitrages techniques, cadrage d architecture et accompagnement d equipe.',
+  },
+  {
+    title: 'Senior Backend Engineer',
+    text: 'Pour reprendre ou faire evoluer un backend Spring Boot en contexte de production avec exigence de qualite.',
+  },
+  {
+    title: 'Lead Engineer / Referent technique',
+    text: 'Pour des equipes qui veulent un profil capable d apporter structure, fiabilite et vision pragmatique sur la delivery.',
+  },
+]
+
+function SurfaceTextCard({ title, text }: TitleTextItem) {
+  return (
+    <div className="theme-surface rounded-2xl border p-5">
+      <div className="theme-text-primary text-lg font-semibold mb-2">{title}</div>
+      <p className="theme-text-muted text-sm leading-relaxed">{text}</p>
+    </div>
+  )
+}
+
+function KeyReferenceList({ items }: { items: LabelValueItem[] }) {
+  return (
+    <div className="space-y-4">
+      {items.map((item) => (
+        <div key={item.label} className="border-b pb-4 last:border-b-0 last:pb-0" style={{ borderColor: 'var(--border)' }}>
+          <div className="theme-text-subtle text-xs uppercase tracking-[0.14em] mb-1">{item.label}</div>
+          <div className="theme-text-secondary text-sm leading-relaxed">{item.value}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function MetricGrid({ items }: { items: MetricItem[] }) {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {items.map((item) => (
+        <div key={item.label} className="theme-panel-soft rounded-2xl border px-4 py-4 text-left min-h-[112px]">
+          <div className="theme-text-subtle text-[11px] uppercase tracking-[0.14em] mb-1">{item.label}</div>
+          <div className="theme-text-primary text-xl font-semibold mb-1">{item.value}</div>
+          <div className="theme-text-muted text-sm leading-relaxed">{item.hint}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function SurfaceTextGrid({ items, columnsClassName }: { items: TitleTextItem[]; columnsClassName: string }) {
+  return (
+    <div className={columnsClassName}>
+      {items.map((item) => (
+        <SurfaceTextCard key={item.title} {...item} />
+      ))}
+    </div>
+  )
+}
+
 type PortfolioLandingProps = {
   accessExpiryLabel: string | null
   messages: Message[]
@@ -113,19 +228,7 @@ export function PortfolioLanding({
 
             <div className="theme-panel rounded-3xl p-5 sm:p-6 md:p-8 border backdrop-blur-md">
               <div className="theme-text-accent text-sm font-medium mb-4">Points de repere</div>
-              <div className="space-y-4">
-                {[
-                  { label: 'Poste recent', value: 'Tech Lead Backend & Mobile' },
-                  { label: 'Secteurs', value: 'Banque, assurance, paiements' },
-                  { label: 'Stack dominante', value: 'Java, Spring Boot, Kotlin, Kubernetes' },
-                  { label: 'Differenciateurs', value: 'Microservices, securite, delivery, leadership technique' },
-                ].map((item) => (
-                  <div key={item.label} className="border-b pb-4 last:border-b-0 last:pb-0" style={{ borderColor: 'var(--border)' }}>
-                    <div className="theme-text-subtle text-xs uppercase tracking-[0.14em] mb-1">{item.label}</div>
-                    <div className="theme-text-secondary text-sm leading-relaxed">{item.value}</div>
-                  </div>
-                ))}
-              </div>
+              <KeyReferenceList items={keyReferenceItems} />
             </div>
           </div>
         </motion.div>
@@ -136,20 +239,7 @@ export function PortfolioLanding({
           transition={{ delay: 0.37, duration: 0.5 }}
           className="w-full max-w-5xl px-0 md:px-0 mb-8"
         >
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              { label: 'Experience', value: '8+ ans', hint: 'Backend, mobile, delivery' },
-              { label: 'Secteurs', value: '3 domaines', hint: 'Banque, assurance, paiements' },
-              { label: 'Role recent', value: 'Tech Lead', hint: 'Backend et mobile' },
-              { label: 'Valeur rapide', value: 'CV lisible', hint: 'Chat pour approfondir' },
-            ].map((item) => (
-              <div key={item.label} className="theme-panel-soft rounded-2xl border px-4 py-4 text-left min-h-[112px]">
-                <div className="theme-text-subtle text-[11px] uppercase tracking-[0.14em] mb-1">{item.label}</div>
-                <div className="theme-text-primary text-xl font-semibold mb-1">{item.value}</div>
-                <div className="theme-text-muted text-sm leading-relaxed">{item.hint}</div>
-              </div>
-            ))}
-          </div>
+          <MetricGrid items={overviewMetrics} />
         </motion.div>
 
         <motion.div
@@ -208,12 +298,7 @@ export function PortfolioLanding({
                 </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[
-                  'Verifier une experience recente',
-                  'Comparer le profil a un poste cible',
-                  'Creuser la stack ou l architecture',
-                  'Obtenir un resume factuel en quelques lignes',
-                ].map((item) => (
+                {chatPreparationItems.map((item) => (
                   <div key={item} className="theme-surface rounded-2xl border px-4 py-3 text-sm theme-text-secondary">
                     {item}
                   </div>
@@ -285,32 +370,7 @@ export function PortfolioLanding({
                 Cette section aide a faire le lien entre le parcours et un besoin concret. Elle ne remplace pas l echange, mais permet de voir rapidement les types de sujets sur lesquels Mohamed peut etre utile des les premieres semaines.
               </p>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[
-                {
-                  title: 'Prendre ou reprendre un backend Spring Boot',
-                  text: 'Stabilisation, evolution, reduction de dette technique, cadrage d architecture et remise a niveau de la qualite.',
-                },
-                {
-                  title: 'Tenir un role de Tech Lead Backend',
-                  text: 'Arbitrages techniques, accompagnement d equipe, coordination delivery et mise en place de standards pragmatiques.',
-                },
-                {
-                  title: 'Intervenir sur des contextes regulés ou sensibles',
-                  text: 'Banque, assurance, paiements ou SI critiques avec exigences de securite, fiabilite et maintenabilite.',
-                },
-                {
-                  title: 'Aider sur la production et la robustesse',
-                  text: 'Incidents, observabilite, supervision, BFF, microservices, CI/CD et hygiene technique.',
-                },
-              ].map((item) => (
-                <div key={item.title} className="theme-surface rounded-2xl border p-5">
-                  <div className="theme-text-primary text-lg font-semibold mb-2">{item.title}</div>
-                  <p className="theme-text-muted text-sm leading-relaxed">{item.text}</p>
-                </div>
-              ))}
-            </div>
+            <SurfaceTextGrid items={contributionTopics} columnsClassName="grid grid-cols-1 md:grid-cols-2 gap-4" />
           </div>
         </section>
 
@@ -325,28 +385,7 @@ export function PortfolioLanding({
                 Ce repere n enferme pas le profil, mais il aide a comprendre plus vite dans quels cadres l experience et les responsabilites recentes sont le plus directement transposables.
               </p>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                {
-                  title: 'Tech Lead Backend',
-                  text: 'Pour tenir un role melant execution, arbitrages techniques, cadrage d architecture et accompagnement d equipe.',
-                },
-                {
-                  title: 'Senior Backend Engineer',
-                  text: 'Pour reprendre ou faire evoluer un backend Spring Boot en contexte de production avec exigence de qualite.',
-                },
-                {
-                  title: 'Lead Engineer / Referent technique',
-                  text: 'Pour des equipes qui veulent un profil capable d apporter structure, fiabilite et vision pragmatique sur la delivery.',
-                },
-              ].map((item) => (
-                <div key={item.title} className="theme-surface rounded-2xl border p-5">
-                  <div className="theme-text-primary text-lg font-semibold mb-2">{item.title}</div>
-                  <p className="theme-text-muted text-sm leading-relaxed">{item.text}</p>
-                </div>
-              ))}
-            </div>
+            <SurfaceTextGrid items={targetRoleItems} columnsClassName="grid grid-cols-1 md:grid-cols-3 gap-4" />
           </div>
         </section>
 
