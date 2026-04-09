@@ -22,8 +22,13 @@ function App() {
   }, [accessState.authenticated, accessState.isChecking, createSession, sessionId])
 
   const handleLogout = async () => {
-    await logout()
-    clearConversation()
+    try {
+      await logout()
+    } catch (error) {
+      setConnectionError(error instanceof Error ? error.message : 'Erreur inconnue')
+    } finally {
+      clearConversation()
+    }
   }
 
   const showAccessGate = accessState.enabled && !accessState.authenticated

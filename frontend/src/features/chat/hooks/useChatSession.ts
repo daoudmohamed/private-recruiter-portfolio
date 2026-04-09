@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { createSession as apiCreateSession, sendChatMessage } from '../../../utils/api'
 import {
   clearPersistedConversation,
@@ -34,7 +34,7 @@ export function useChatSession(onError: (message: string | null) => void) {
   const [messages, setMessages] = useState<Message[]>(() => getPersistedMessages())
   const [isLoading, setIsLoading] = useState(false)
 
-  const createSession = async (): Promise<string | null> => {
+  const createSession = useCallback(async (): Promise<string | null> => {
     try {
       onError(null)
       const session = await apiCreateSession()
@@ -47,7 +47,7 @@ export function useChatSession(onError: (message: string | null) => void) {
       onError(error instanceof Error ? error.message : 'Erreur inconnue')
       return null
     }
-  }
+  }, [onError])
 
   const sendMessage = async (message: string) => {
     if (!sessionId) return
@@ -138,11 +138,11 @@ export function useChatSession(onError: (message: string | null) => void) {
     }
   }
 
-  const clearConversation = () => {
+  const clearConversation = useCallback(() => {
     clearPersistedConversation()
     setSessionId(null)
     setMessages([])
-  }
+  }, [])
 
   return {
     sessionId,

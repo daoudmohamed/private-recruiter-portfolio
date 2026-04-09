@@ -76,6 +76,7 @@ describe('App recruiter captcha flow', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     window.localStorage.clear()
+    window.sessionStorage.clear()
     window.history.replaceState({}, '', '/')
     document.body.innerHTML = ''
     Object.defineProperty(window, 'matchMedia', {
@@ -214,6 +215,55 @@ describe('App recruiter captcha flow', () => {
 
     await waitFor(() => expect(apiMocks.logoutRecruiterAccess).toHaveBeenCalledTimes(1))
     expect(await screen.findByText('Accès recruteur requis')).toBeTruthy()
+  })
+
+  it('clears the local conversation even when recruiter logout fails', async () => {
+    window.sessionStorage.setItem('kb_session', 'persisted-session')
+    window.sessionStorage.setItem(
+      'kb_messages',
+      JSON.stringify([{ id: 1, role: 'user', content: 'Bonjour' }]),
+    )
+    apiMocks.getRecruiterAccessSession.mockResolvedValue(
+      buildAccessSession({
+        authenticated: true,
+        expiresAt: '2026-04-10T08:15:00Z',
+      }),
+    )
+    apiMocks.logoutRecruiterAccess.mockRejectedValue(new Error('Déconnexion serveur indisponible'))
+
+    render(<App />)
+
+    expect(await screen.findByTitle('Se déconnecter')).toBeTruthy()
+    fireEvent.click(screen.getByTitle('Se déconnecter'))
+
+    await waitFor(() => expect(apiMocks.logoutRecruiterAccess).toHaveBeenCalledTimes(1))
+    expect(window.sessionStorage.getItem('kb_session')).toBeNull()
+    expect(window.sessionStorage.getItem('kb_messages')).toBeNull()
+    expect(await screen.findByText('Accès recruteur requis')).toBeTruthy()
+    expect((await screen.findByRole('alert')).textContent).toContain('Déconnexion serveur indisponible')
+  })
+
+  it('does not create duplicate backend sessions during authenticated rerenders before the first session resolves', async () => {
+    const deferredCreateSession = createDeferred<{ id: string }>()
+    apiMocks.getRecruiterAccessSession.mockResolvedValue(
+      buildAccessSession({
+        authenticated: true,
+        expiresAt: '2026-04-10T08:15:00Z',
+      }),
+    )
+    apiMocks.createSession.mockReturnValue(deferredCreateSession.promise)
+
+    render(<App />)
+
+    await waitFor(() => expect(apiMocks.createSession).toHaveBeenCalledTimes(1))
+
+    fireEvent.click(screen.getByTitle('Activer le mode clair'))
+
+    await waitFor(() => expect(apiMocks.createSession).toHaveBeenCalledTimes(1))
+
+    deferredCreateSession.resolve({ id: 'session-1' })
+
+    expect(await screen.findByTitle('Activer le mode sombre')).toBeTruthy()
   })
 
   it('surfaces a recruiter access bootstrap error and lets the user dismiss it', async () => {
