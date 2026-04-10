@@ -177,8 +177,7 @@ data class KnowledgeBaseProperties(
 
     data class Documents(
         @field:NotBlank
-        val folder: String = "documents/",
-        val scanOnStartup: Boolean = true
+        val folder: String = "documents/"
     )
 
     data class Qdrant(

@@ -2,16 +2,10 @@ package com.knowledgebase.ai.rag
 
 import com.knowledgebase.config.KnowledgeBaseProperties
 import com.knowledgebase.config.RedisKeyspace
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import mu.KotlinLogging
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.boot.context.event.ApplicationReadyEvent
-import org.springframework.context.event.EventListener
 import org.springframework.core.io.FileSystemResource
 import org.springframework.data.redis.core.ReactiveRedisTemplate
 import org.springframework.stereotype.Component
@@ -26,7 +20,7 @@ import kotlin.streams.toList
 private val logger = KotlinLogging.logger {}
 
 /**
- * Service that scans a local folder for documents at startup.
+ * Service that scans a local folder for documents on demand.
  * Skips files that have already been ingested (tracked in Redis by fingerprint).
  */
 @Component
@@ -36,26 +30,8 @@ class FolderScannerService(
     private val redisTemplate: ReactiveRedisTemplate<String, String>,
     private val knowledgeBaseProperties: KnowledgeBaseProperties
 ) {
-    private val startupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val supportedExtensions = setOf("pdf", "txt", "md", "markdown")
     private val documentsFolder = knowledgeBaseProperties.documents.folder
-    private val scanOnStartup = knowledgeBaseProperties.documents.scanOnStartup
-
-    @EventListener(ApplicationReadyEvent::class)
-    fun onStartup() {
-        if (!scanOnStartup) {
-            logger.info { "Document folder scanning is disabled" }
-            return
-        }
-
-        startupScope.launch {
-            try {
-                scanFolder()
-            } catch (e: Exception) {
-                logger.error(e) { "Error during folder scanning" }
-            }
-        }
-    }
 
     suspend fun scanFolder(): FolderScanSummary {
         logger.info { "Scanning documents folder: $documentsFolder" }

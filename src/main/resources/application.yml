@@ -172,7 +172,6 @@ knowledgebase:
     top-k: 5
   documents:
     folder: ${DOCUMENTS_FOLDER:documents/}
-    scan-on-startup: true
 
 # Logging Configuration
 logging:
