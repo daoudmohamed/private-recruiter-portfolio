@@ -47,4 +47,3 @@ knowledgebase:
         template-id: ${BREVO_TEMPLATE_ID:}
         reply-to: ${RECRUITER_ACCESS_REPLY_TO:noreplay@daoud.me}
   documents:
-    scan-on-startup: true

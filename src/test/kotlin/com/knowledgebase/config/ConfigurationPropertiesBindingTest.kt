@@ -53,8 +53,7 @@ class ConfigurationPropertiesBindingTest {
                 "knowledgebase.chat.session-timeout-hours=12",
                 "knowledgebase.rag.similarity-threshold=0.81",
                 "knowledgebase.rag.top-k=9",
-                "knowledgebase.documents.folder=/tmp/docs",
-                "knowledgebase.documents.scan-on-startup=false"
+                "knowledgebase.documents.folder=/tmp/docs"
             )
             .run { context ->
                 val properties = context.getBean(KnowledgeBaseProperties::class.java)
@@ -96,7 +95,6 @@ class ConfigurationPropertiesBindingTest {
                 assertThat(properties.rag.similarityThreshold).isEqualTo(0.81)
                 assertThat(properties.rag.topK).isEqualTo(9)
                 assertThat(properties.documents.folder).isEqualTo("/tmp/docs")
-                assertThat(properties.documents.scanOnStartup).isFalse()
             }
     }
 

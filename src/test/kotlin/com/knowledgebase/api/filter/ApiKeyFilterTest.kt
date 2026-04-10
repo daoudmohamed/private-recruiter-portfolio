@@ -116,6 +116,50 @@ class ApiKeyFilterTest {
         assertThat(exchange.response.statusCode).isNull()
     }
 
+    @Test
+    fun `should require admin api key for configured document admin paths in recruiter mode`() {
+        val filter = ApiKeyFilter(
+            KnowledgeBaseProperties(
+                security = KnowledgeBaseProperties.Security(
+                    adminApiKey = "admin-secret",
+                    adminPaths = listOf("/api/v1/documents", "/api/v1/documents/**")
+                ),
+                recruiterAccess = KnowledgeBaseProperties.RecruiterAccess(enabled = true)
+            )
+        )
+        val exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/documents").build())
+        val chain = RecordingChain()
+
+        filter.filter(exchange, chain).block()
+
+        assertThat(chain.called).isFalse()
+        assertThat(exchange.response.statusCode).isEqualTo(HttpStatus.UNAUTHORIZED)
+    }
+
+    @Test
+    fun `should allow document admin path with valid admin api key in recruiter mode`() {
+        val filter = ApiKeyFilter(
+            KnowledgeBaseProperties(
+                security = KnowledgeBaseProperties.Security(
+                    adminApiKey = "admin-secret",
+                    adminPaths = listOf("/api/v1/documents", "/api/v1/documents/**")
+                ),
+                recruiterAccess = KnowledgeBaseProperties.RecruiterAccess(enabled = true)
+            )
+        )
+        val exchange = MockServerWebExchange.from(
+            MockServerHttpRequest.get("/api/v1/documents/cv.md")
+                .header("X-API-Key", "admin-secret")
+                .build()
+        )
+        val chain = RecordingChain()
+
+        filter.filter(exchange, chain).block()
+
+        assertThat(chain.called).isTrue()
+        assertThat(exchange.response.statusCode).isNull()
+    }
+
     private class RecordingChain : WebFilterChain {
         var called: Boolean = false
 

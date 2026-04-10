@@ -11,6 +11,10 @@ const apiMocks = vi.hoisted(() => ({
   consumeRecruiterAccessToken: vi.fn(),
   logoutRecruiterAccess: vi.fn(),
   sendChatMessage: vi.fn(),
+  listAdminDocuments: vi.fn(),
+  uploadAdminDocument: vi.fn(),
+  scanAdminDocuments: vi.fn(),
+  deleteAdminDocument: vi.fn(),
 }))
 
 vi.mock('./utils/api', async () => {
@@ -23,6 +27,10 @@ vi.mock('./utils/api', async () => {
     consumeRecruiterAccessToken: apiMocks.consumeRecruiterAccessToken,
     logoutRecruiterAccess: apiMocks.logoutRecruiterAccess,
     sendChatMessage: apiMocks.sendChatMessage,
+    listAdminDocuments: apiMocks.listAdminDocuments,
+    uploadAdminDocument: apiMocks.uploadAdminDocument,
+    scanAdminDocuments: apiMocks.scanAdminDocuments,
+    deleteAdminDocument: apiMocks.deleteAdminDocument,
   }
 })
 
@@ -105,6 +113,10 @@ describe('App recruiter captcha flow', () => {
     apiMocks.consumeRecruiterAccessToken.mockResolvedValue(undefined)
     apiMocks.logoutRecruiterAccess.mockResolvedValue(undefined)
     apiMocks.sendChatMessage.mockResolvedValue(new Response(''))
+    apiMocks.listAdminDocuments.mockResolvedValue({ sources: [], count: 0 })
+    apiMocks.uploadAdminDocument.mockResolvedValue({ message: 'Document importé', chunksCreated: 2 })
+    apiMocks.scanAdminDocuments.mockResolvedValue({ status: 'Scan terminé' })
+    apiMocks.deleteAdminDocument.mockResolvedValue({ source: 'cv.md', deleted: true, message: 'Documents deleted' })
   })
 
   it('blocks invitation submission while recaptcha v3 is still loading', async () => {
@@ -304,5 +316,63 @@ describe('App recruiter captcha flow', () => {
 
     const fallbackLink = await screen.findByRole('link', { name: 'Demander un accès' })
     expect(fallbackLink.getAttribute('href')).toContain('mailto:daoud.mohamed.tn@gmail.com')
+  })
+
+  it('renders the hidden admin documents route with in-memory api key auth', async () => {
+    window.history.replaceState({}, '', '/admin/documents')
+    apiMocks.listAdminDocuments.mockResolvedValue({
+      sources: ['README.md', 'cv.pdf'],
+      count: 2,
+    })
+
+    render(<App />)
+
+    expect(await screen.findByText('Gestion documentaire')).toBeTruthy()
+    fireEvent.change(screen.getByPlaceholderText('ADMIN_API_KEY'), { target: { value: 'admin-secret' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Ouvrir l interface' }))
+
+    await waitFor(() => expect(apiMocks.listAdminDocuments).toHaveBeenCalledWith('admin-secret'))
+    expect(await screen.findByText('Base documentaire')).toBeTruthy()
+    expect(screen.getByText('README.md')).toBeTruthy()
+    expect(screen.getByText('cv.pdf')).toBeTruthy()
+  })
+
+  it('supports upload, scan, delete and local key clearing on the admin documents route', async () => {
+    window.history.replaceState({}, '', '/admin/documents')
+    apiMocks.listAdminDocuments
+      .mockResolvedValueOnce({ sources: ['cv.md'], count: 1 })
+      .mockResolvedValueOnce({ sources: ['cv.md', 'README.md'], count: 2 })
+      .mockResolvedValueOnce({ sources: ['cv.md', 'README.md'], count: 2 })
+      .mockResolvedValueOnce({ sources: ['README.md'], count: 1 })
+    const confirmSpy = vi.spyOn(globalThis, 'confirm').mockReturnValue(true)
+
+    render(<App />)
+
+    fireEvent.change(await screen.findByPlaceholderText('ADMIN_API_KEY'), { target: { value: 'admin-secret' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Ouvrir l interface' }))
+
+    expect(await screen.findByText('cv.md')).toBeTruthy()
+
+    const file = new File(['hello'], 'README.md', { type: 'text/markdown' })
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } })
+    })
+
+    await waitFor(() => expect(apiMocks.uploadAdminDocument).toHaveBeenCalledWith(file, 'admin-secret'))
+    expect(await screen.findByText('README.md')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lancer un scan' }))
+    await waitFor(() => expect(apiMocks.scanAdminDocuments).toHaveBeenCalledWith('admin-secret'))
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Supprimer' })[0])
+    await waitFor(() => expect(apiMocks.deleteAdminDocument).toHaveBeenCalledWith('cv.md', 'admin-secret'))
+    expect(confirmSpy).toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Effacer la clé' }))
+    expect(await screen.findByText('Gestion documentaire')).toBeTruthy()
+    expect(screen.getByText('Clé admin effacée localement.')).toBeTruthy()
+
+    confirmSpy.mockRestore()
   })
 })
