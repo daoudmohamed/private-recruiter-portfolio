@@ -1,6 +1,6 @@
-# Knowledge Base Frontend
+# Frontend
 
-Interface React/Vite pour consommer l'API RAG du projet.
+Frontend React/Vite du portfolio privé recruteur.
 
 ## Démarrage
 
@@ -8,6 +8,7 @@ Interface React/Vite pour consommer l'API RAG du projet.
 npm install
 npm run dev
 npm run build
+npm test
 ```
 
 Par défaut, l'application tourne sur `http://localhost:5173`.
@@ -22,29 +23,31 @@ Exemple:
 VITE_API_BASE=http://localhost:8080/api/v1
 ```
 
-## Fonctionnalités actuelles
+## Responsabilités
 
-- Chat en streaming via SSE
-- Création et persistance locale d'une session de conversation
-- Saisie optionnelle d'une API key stockée en `sessionStorage`
-- Sections de présentation statiques autour du chat
+- shell d'application et thème
+- portail recruteur privé
+- demande d'invitation et consommation de lien d'accès
+- chat en streaming via SSE
+- rendu du portfolio et points de contact
 
 ## Structure
 
 ```text
 src/
-  App.tsx
-  components/
-    ChatWindow.tsx
-    ErrorBoundary.tsx
-    chat/
-    sections/
-  utils/
-    api.ts
-    security.ts
+  app/        app shell, bootstrapping, app-wide hooks
+  features/   chat, recruiter access, portfolio
+  shared/     UI réutilisable et assets stables
+  utils/      API client centralisé et helpers bas niveau
 ```
 
-## Limites actuelles
+## Règles
 
-- L'upload de documents existe dans l'API frontend, mais aucun composant d'upload n'est encore exposé dans l'interface.
-- La clé API utilisateur est conservée côté navigateur pour la durée de l'onglet.
+- garder l'accès API centralisé dans `src/utils/api.ts`
+- éviter de remettre l'orchestration produit dans `App.tsx`
+- ajouter la logique métier frontend dans `features/*`
+- ne promouvoir dans `shared/*` que ce qui a une vraie réutilisation
+
+Pour les conventions du dépôt :
+
+- `../AGENTS.md`
