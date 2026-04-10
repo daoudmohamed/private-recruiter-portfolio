@@ -32,6 +32,8 @@ data class KnowledgeBaseProperties(
         @field:NotEmpty
         val publicPaths: List<@NotBlank String> = listOf(
             "/",
+            "/admin",
+            "/admin/**",
             "/index.html",
             "/vite.svg",
             "/favicon.ico",
@@ -53,7 +55,9 @@ data class KnowledgeBaseProperties(
         ),
         @field:NotEmpty
         val adminPaths: List<@NotBlank String> = listOf(
-            "/api/v1/recruiter-access/invitations"
+            "/api/v1/recruiter-access/invitations",
+            "/api/v1/documents",
+            "/api/v1/documents/**"
         ),
         @field:Valid
         val cors: Cors = Cors()

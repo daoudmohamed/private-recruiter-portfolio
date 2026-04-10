@@ -4,7 +4,6 @@ import com.ninjasquad.springmockk.MockkBean
 import com.knowledgebase.ai.rag.DocumentIngestionService
 import com.knowledgebase.ai.rag.FolderScanSummary
 import com.knowledgebase.ai.rag.FolderScannerService
-import com.knowledgebase.support.fetchCsrfToken
 import io.mockk.coEvery
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -15,7 +14,15 @@ import org.springframework.http.MediaType
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.reactive.server.WebTestClient
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = [
+        "knowledgebase.security.admin-api-key=test-admin-key",
+        "knowledgebase.recruiter-access.enabled=true",
+        "knowledgebase.recruiter-access.frontend-base-url=http://localhost:5173",
+        "knowledgebase.recruiter-access.token-secret=test-token-secret"
+    ]
+)
 @ActiveProfiles("test")
 class DocumentIngestionControllerHttpTest {
 
@@ -42,8 +49,6 @@ class DocumentIngestionControllerHttpTest {
 
     @Test
     fun `post documents scan should expose scan summary`() {
-        val csrfToken = webTestClient.fetchCsrfToken()
-
         coEvery { folderScannerService.scanFolder() } returns FolderScanSummary(
             totalDocuments = 4,
             documentsIngested = listOf("cv.md", "faq.pdf"),
@@ -53,8 +58,7 @@ class DocumentIngestionControllerHttpTest {
 
         webTestClient.post()
             .uri("/api/v1/documents/scan")
-            .cookie("XSRF-TOKEN", csrfToken)
-            .header("X-XSRF-TOKEN", csrfToken)
+            .header("X-API-Key", "test-admin-key")
             .exchange()
             .expectStatus().isOk
             .expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_JSON)
@@ -71,6 +75,7 @@ class DocumentIngestionControllerHttpTest {
 
         webTestClient.get()
             .uri("/api/v1/documents")
+            .header("X-API-Key", "test-admin-key")
             .exchange()
             .expectStatus().isOk
             .expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_JSON)
@@ -82,14 +87,11 @@ class DocumentIngestionControllerHttpTest {
 
     @Test
     fun `delete document source should expose deletion outcome`() {
-        val csrfToken = webTestClient.fetchCsrfToken()
-
         coEvery { documentIngestionService.deleteBySource("cv.md") } returns true
 
         webTestClient.delete()
             .uri("/api/v1/documents/cv.md")
-            .cookie("XSRF-TOKEN", csrfToken)
-            .header("X-XSRF-TOKEN", csrfToken)
+            .header("X-API-Key", "test-admin-key")
             .exchange()
             .expectStatus().isOk
             .expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_JSON)
@@ -97,5 +99,13 @@ class DocumentIngestionControllerHttpTest {
             .jsonPath("$.source").isEqualTo("cv.md")
             .jsonPath("$.deleted").isEqualTo(true)
             .jsonPath("$.message").isEqualTo("Documents deleted")
+    }
+
+    @Test
+    fun `get documents should reject missing admin api key`() {
+        webTestClient.get()
+            .uri("/api/v1/documents")
+            .exchange()
+            .expectStatus().isUnauthorized
     }
 }

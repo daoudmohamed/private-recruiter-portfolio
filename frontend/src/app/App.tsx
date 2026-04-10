@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { LockKeyhole } from 'lucide-react'
+import { AdminDocumentsPage } from '../features/admin-documents/components/AdminDocumentsPage'
 import { useChatSession } from '../features/chat/hooks/useChatSession'
 import { PortfolioLanding } from '../features/portfolio/components/PortfolioLanding'
 import { ContactSection } from '../features/portfolio/components/ContactSection'
@@ -9,7 +10,7 @@ import { AppNavbar } from '../shared/ui/AppNavbar'
 import { ErrorBanner } from '../shared/ui/ErrorBanner'
 import { useThemeMode } from './hooks/useThemeMode'
 
-function App() {
+function PortfolioAppContent() {
   const [connectionError, setConnectionError] = useState<string | null>(null)
   const { themeMode, toggleTheme } = useThemeMode()
   const { sessionId, messages, isLoading, createSession, sendMessage, clearConversation } = useChatSession(setConnectionError)
@@ -110,6 +111,42 @@ function App() {
       </main>
     </div>
   )
+}
+
+function AdminAppContent() {
+  const { themeMode, toggleTheme } = useThemeMode()
+
+  return (
+    <div className="app-shell min-h-screen font-sans overflow-x-hidden" style={{ WebkitFontSmoothing: 'antialiased' }}>
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div
+          className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full blur-[120px] animate-pulse"
+          style={{ animationDuration: '4s', background: 'var(--orb-a)' }}
+        />
+        <div
+          className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full blur-[120px] animate-pulse"
+          style={{ animationDuration: '7s', background: 'var(--orb-b)' }}
+        />
+        <div className="absolute top-[40%] left-[30%] w-[30%] h-[30%] rounded-full blur-[100px]" style={{ background: 'var(--orb-c)' }} />
+      </div>
+
+      <AppNavbar
+        themeMode={themeMode}
+        onToggleTheme={toggleTheme}
+        canLogout={false}
+        onLogout={() => {}}
+      />
+
+      <main className="relative z-10 pt-20 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <AdminDocumentsPage />
+      </main>
+    </div>
+  )
+}
+
+function App() {
+  const isAdminDocumentsRoute = globalThis.location.pathname === '/admin/documents'
+  return isAdminDocumentsRoute ? <AdminAppContent /> : <PortfolioAppContent />
 }
 
 export default App

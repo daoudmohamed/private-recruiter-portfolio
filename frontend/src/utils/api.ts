@@ -26,12 +26,28 @@ export interface RequestRecruiterInvitationResponse {
 }
 
 export interface UploadResult {
+  success?: boolean
+  filename?: string
+  message?: string
   chunksCreated: number
   status?: string
 }
 
 export interface ScanResult {
   status?: string
+  totalDocuments?: number
+  documentsIngested?: string[]
+}
+
+export interface DocumentsListResponse {
+  sources: string[]
+  count: number
+}
+
+export interface DocumentDeleteResult {
+  source: string
+  deleted: boolean
+  message: string
 }
 
 type ErrorBody = {
@@ -53,6 +69,16 @@ export class ApiError extends Error {
 
 function buildJsonHeaders(): Record<string, string> {
   return { 'Content-Type': 'application/json' }
+}
+
+function withAdminApiKey(headers: HeadersInit | undefined, adminApiKey?: string): HeadersInit | undefined {
+  if (!adminApiKey) {
+    return headers
+  }
+
+  const mergedHeaders = new Headers(headers)
+  mergedHeaders.set('X-API-Key', adminApiKey)
+  return mergedHeaders
 }
 
 function readCookie(name: string): string | null {
@@ -207,11 +233,16 @@ export async function sendChatMessage(sessionId: string, message: string): Promi
 }
 
 export async function uploadDocument(file: File): Promise<UploadResult> {
+  return uploadAdminDocument(file)
+}
+
+export async function uploadAdminDocument(file: File, adminApiKey?: string): Promise<UploadResult> {
   const formData = new FormData()
   formData.append('file', file)
 
   const response = await fetchWithTimeout(`${API_BASE}/documents/upload`, {
     method: 'POST',
+    headers: withAdminApiKey(undefined, adminApiKey),
     body: formData,
   }, UPLOAD_TIMEOUT)
 
@@ -223,8 +254,40 @@ export async function uploadDocument(file: File): Promise<UploadResult> {
 }
 
 export async function scanDocuments(): Promise<ScanResult> {
+  return scanAdminDocuments()
+}
+
+export async function scanAdminDocuments(adminApiKey?: string): Promise<ScanResult> {
   const response = await fetchWithRetry(`${API_BASE}/documents/scan`, {
     method: 'POST',
+    headers: withAdminApiKey(undefined, adminApiKey),
+  })
+
+  if (!response.ok) {
+    throw await buildError(response)
+  }
+
+  return response.json()
+}
+
+export async function listAdminDocuments(adminApiKey: string): Promise<DocumentsListResponse> {
+  const response = await fetchWithRetry(`${API_BASE}/documents`, {
+    method: 'GET',
+    headers: withAdminApiKey(undefined, adminApiKey),
+  })
+
+  if (!response.ok) {
+    throw await buildError(response)
+  }
+
+  return response.json()
+}
+
+export async function deleteAdminDocument(source: string, adminApiKey: string): Promise<DocumentDeleteResult> {
+  const encodedSource = source.split('/').map(encodeURIComponent).join('/')
+  const response = await fetchWithRetry(`${API_BASE}/documents/${encodedSource}`, {
+    method: 'DELETE',
+    headers: withAdminApiKey(undefined, adminApiKey),
   })
 
   if (!response.ok) {
