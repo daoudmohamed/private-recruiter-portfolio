@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { LockKeyhole } from 'lucide-react'
 import { useChatSession } from '../features/chat/hooks/useChatSession'
 import { PortfolioLanding } from '../features/portfolio/components/PortfolioLanding'
@@ -45,6 +45,43 @@ function App() {
     })
   }, [accessState.expiresAt])
 
+  let mainContent: ReactNode
+
+  if (accessState.isChecking) {
+    mainContent = (
+      <div className="min-h-[calc(100vh-140px)] flex items-center justify-center">
+        <div className="theme-panel rounded-3xl border px-8 py-10 text-center max-w-md w-full">
+          <div className="theme-badge mx-auto mb-4 w-14 h-14 rounded-2xl border flex items-center justify-center">
+            <LockKeyhole className="w-7 h-7" />
+          </div>
+          <h2 className="theme-text-primary text-xl font-semibold mb-2">Vérification de votre accès</h2>
+          <p className="theme-text-muted">Nous validons votre session recruteur en cours.</p>
+        </div>
+      </div>
+    )
+  } else if (showAccessGate) {
+    mainContent = (
+      <AccessGate
+        accessState={accessState}
+        accessStatusMessage={accessStatusMessage}
+        onError={setConnectionError}
+      />
+    )
+  } else {
+    mainContent = (
+      <>
+        <PortfolioLanding
+          accessExpiryLabel={accessExpiryLabel}
+          messages={messages}
+          isLoading={isLoading}
+          onSendMessage={sendMessage}
+          onNewSession={createSession}
+        />
+        <ContactSection />
+      </>
+    )
+  }
+
   return (
     <div className="app-shell min-h-screen font-sans overflow-x-hidden" style={{ WebkitFontSmoothing: 'antialiased' }}>
       <div className="fixed inset-0 z-0 pointer-events-none">
@@ -69,34 +106,7 @@ function App() {
       <ErrorBanner message={connectionError} onDismiss={() => setConnectionError(null)} />
 
       <main className="relative z-10 pt-20 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        {accessState.isChecking ? (
-          <div className="min-h-[calc(100vh-140px)] flex items-center justify-center">
-            <div className="theme-panel rounded-3xl border px-8 py-10 text-center max-w-md w-full">
-              <div className="theme-badge mx-auto mb-4 w-14 h-14 rounded-2xl border flex items-center justify-center">
-                <LockKeyhole className="w-7 h-7" />
-              </div>
-              <h2 className="theme-text-primary text-xl font-semibold mb-2">Vérification de votre accès</h2>
-              <p className="theme-text-muted">Nous validons votre session recruteur en cours.</p>
-            </div>
-          </div>
-        ) : showAccessGate ? (
-          <AccessGate
-            accessState={accessState}
-            accessStatusMessage={accessStatusMessage}
-            onError={setConnectionError}
-          />
-        ) : (
-          <>
-            <PortfolioLanding
-              accessExpiryLabel={accessExpiryLabel}
-              messages={messages}
-              isLoading={isLoading}
-              onSendMessage={sendMessage}
-              onNewSession={createSession}
-            />
-            <ContactSection />
-          </>
-        )}
+        {mainContent}
       </main>
     </div>
   )

@@ -1,5 +1,5 @@
 import { motion } from 'motion/react'
-import { Linkedin, Mail, MessageSquareMore } from 'lucide-react'
+import { LinkedinIcon, Mail, MessageSquareMore } from 'lucide-react'
 
 export function ContactSection() {
   return (
@@ -32,7 +32,7 @@ export function ContactSection() {
                   rel="noreferrer"
                   className="btn-theme-secondary inline-flex items-center justify-center gap-2 rounded-2xl border px-5 py-3 transition-colors"
                 >
-                  <Linkedin className="w-4 h-4" />
+                  <LinkedinIcon className="w-4 h-4" />
                   Ecrire sur LinkedIn
                 </a>
               </div>

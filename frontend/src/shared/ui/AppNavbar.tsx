@@ -1,12 +1,12 @@
-import { Github, Linkedin, LogOut, Mail, Moon, Sun } from 'lucide-react'
+import { GithubIcon, LinkedinIcon, LogOut, Mail, Moon, Sun } from 'lucide-react'
 import type { ThemeMode } from '../../app/hooks/useThemeMode'
 
-type AppNavbarProps = {
+type AppNavbarProps = Readonly<{
   themeMode: ThemeMode
   onToggleTheme: () => void
   canLogout: boolean
   onLogout: () => void
-}
+}>
 
 export function AppNavbar({ themeMode, onToggleTheme, canLogout, onLogout }: AppNavbarProps) {
   return (
@@ -37,10 +37,10 @@ export function AppNavbar({ themeMode, onToggleTheme, canLogout, onLogout }: App
             {themeMode === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
           <a href="https://github.com/daoudmohamed" target="_blank" rel="noreferrer" className="theme-icon-button p-2 rounded-full transition-colors" title="GitHub">
-            <Github className="w-5 h-5" />
+            <GithubIcon className="w-5 h-5" />
           </a>
           <a href="https://www.linkedin.com/in/daoudmohamed/" target="_blank" rel="noreferrer" className="theme-icon-button p-2 rounded-full transition-colors" title="LinkedIn">
-            <Linkedin className="w-5 h-5" />
+            <LinkedinIcon className="w-5 h-5" />
           </a>
           <a href="mailto:daoud.mohamed.tn@gmail.com" className="theme-icon-button p-2 rounded-full transition-colors" title="Email">
             <Mail className="w-5 h-5" />

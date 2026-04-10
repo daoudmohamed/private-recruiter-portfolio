@@ -7,19 +7,19 @@ import { SkillsSection } from '../../../components/sections/SkillsSection'
 import type { Message } from '../../../utils/security'
 import { credibilitySignals, recruiterSummary } from '../content'
 
-type LabelValueItem = {
+type LabelValueItem = Readonly<{
   label: string
   value: string
-}
+}>
 
-type MetricItem = LabelValueItem & {
+type MetricItem = LabelValueItem & Readonly<{
   hint: string
-}
+}>
 
-type TitleTextItem = {
+type TitleTextItem = Readonly<{
   title: string
   text: string
-}
+}>
 
 const keyReferenceItems: LabelValueItem[] = [
   { label: 'Poste recent', value: 'Tech Lead Backend & Mobile' },
@@ -85,7 +85,7 @@ function SurfaceTextCard({ title, text }: TitleTextItem) {
   )
 }
 
-function KeyReferenceList({ items }: { items: LabelValueItem[] }) {
+function KeyReferenceList({ items }: Readonly<{ items: LabelValueItem[] }>) {
   return (
     <div className="space-y-4">
       {items.map((item) => (
@@ -98,7 +98,7 @@ function KeyReferenceList({ items }: { items: LabelValueItem[] }) {
   )
 }
 
-function MetricGrid({ items }: { items: MetricItem[] }) {
+function MetricGrid({ items }: Readonly<{ items: MetricItem[] }>) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       {items.map((item) => (
@@ -112,7 +112,7 @@ function MetricGrid({ items }: { items: MetricItem[] }) {
   )
 }
 
-function SurfaceTextGrid({ items, columnsClassName }: { items: TitleTextItem[]; columnsClassName: string }) {
+function SurfaceTextGrid({ items, columnsClassName }: Readonly<{ items: TitleTextItem[]; columnsClassName: string }>) {
   return (
     <div className={columnsClassName}>
       {items.map((item) => (
@@ -122,13 +122,13 @@ function SurfaceTextGrid({ items, columnsClassName }: { items: TitleTextItem[]; 
   )
 }
 
-type PortfolioLandingProps = {
+type PortfolioLandingProps = Readonly<{
   accessExpiryLabel: string | null
   messages: Message[]
   isLoading: boolean
   onSendMessage: (message: string) => Promise<void>
   onNewSession: () => Promise<string | null>
-}
+}>
 
 export function PortfolioLanding({
   accessExpiryLabel,

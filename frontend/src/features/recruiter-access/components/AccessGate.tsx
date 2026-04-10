@@ -5,11 +5,11 @@ import { validateEmail } from '../../../utils/security'
 import { useRecaptcha } from '../hooks/useRecaptcha'
 import type { AccessState } from '../types'
 
-type AccessGateProps = {
+type AccessGateProps = Readonly<{
   accessState: AccessState
   accessStatusMessage: string | null
   onError: (message: string | null) => void
-}
+}>
 
 export function AccessGate({ accessState, accessStatusMessage, onError }: AccessGateProps) {
   const [inviteEmail, setInviteEmail] = useState('')

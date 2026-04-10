@@ -1,10 +1,10 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { AlertCircle, X } from 'lucide-react'
 
-type ErrorBannerProps = {
+type ErrorBannerProps = Readonly<{
   message: string | null
   onDismiss: () => void
-}
+}>
 
 export function ErrorBanner({ message, onDismiss }: ErrorBannerProps) {
   return (
