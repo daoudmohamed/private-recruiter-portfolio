@@ -232,10 +232,29 @@ If a warning starts coming from repository code instead of dependencies:
 The frontend is a client of the backend API.
 Keep it simple and resilient.
 
+- use a feature-first structure by default:
+  - `frontend/src/app/*` for bootstrapping, global shell, and app-wide hooks
+  - `frontend/src/features/*` for business capabilities and feature orchestration
+  - `frontend/src/shared/*` for reusable UI primitives and stable cross-feature utilities
 - parse streaming responses defensively
 - keep API access centralized in `frontend/src/utils/api.ts`
+- keep top-level app components thin; do not let `App.tsx` become a dumping ground for orchestration
+- put feature orchestration in dedicated hooks or feature components, not in presentation-only sections
+- keep reusable sections and UI shell elements separate from recruiter-access and chat workflows
 - keep browser persistence limited and intentional
 - do not expose broken links or placeholder UX
+
+Prefer:
+
+- small presentational components with explicit props
+- one clear orchestration hook per feature when state and side effects grow
+- extracting shared UI only after a second real reuse appears
+
+Avoid:
+
+- flat `components/` and `utils/` growth without ownership boundaries
+- mixing recruiter access, chat streaming, branding, and portfolio content in one component
+- hiding backend calls inside arbitrary UI leaf components
 
 ## Expected Output for Future Agents
 
