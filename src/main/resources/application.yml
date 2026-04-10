@@ -89,6 +89,8 @@ knowledgebase:
     admin-api-key: ${ADMIN_API_KEY:${API_KEY:}}
     public-paths:
       - /
+      - /admin
+      - /admin/**
       - /index.html
       - /vite.svg
       - /favicon.ico
@@ -110,6 +112,8 @@ knowledgebase:
       - /api/v1/recruiter-access/logout
     admin-paths:
       - /api/v1/recruiter-access/invitations
+      - /api/v1/documents
+      - /api/v1/documents/**
     cors:
       allowed-origins:
         - ${FRONTEND_ORIGIN:http://localhost:5173}
@@ -168,7 +172,6 @@ knowledgebase:
     top-k: 5
   documents:
     folder: ${DOCUMENTS_FOLDER:documents/}
-    scan-on-startup: true
 
 # Logging Configuration
 logging:

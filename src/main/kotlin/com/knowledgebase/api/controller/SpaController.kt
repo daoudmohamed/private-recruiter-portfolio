@@ -19,7 +19,10 @@ class SpaController {
 
     @GetMapping(
         "/",
+        "/admin",
+        "/admin/documents",
         "/access",
+        "/admin/{path:[^.]*}",
         "/access/{path:[^.]*}"
     )
     @ResponseBody

@@ -7,6 +7,8 @@ Keep only documents here that are still useful for implementation, deployment, o
 - `functional-spec.md`: product scope, actors, user journeys, functional rules
 - `technical-spec.md`: target architecture, components, contracts, technical decisions
 - `non-functional-spec.md`: security, reliability, observability, performance, compliance
+
+- `admin-documents-interface.md`: private admin UI for document listing, upload, scan, and deletion
 - `github-actions-cicd.md`: CI/CD contract, GitHub Actions workflows, required environment secrets
 - `sre-operations-guide.md`: recommended operating model for self-hosted production and incident handling
 - `stateful-services-contract.md`: operational contract for Redis and Qdrant in production

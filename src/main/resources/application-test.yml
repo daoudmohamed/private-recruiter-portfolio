@@ -19,7 +19,5 @@ knowledgebase:
   recruiter-access:
     enabled: false
     request-invitation-enabled: false
-  documents:
-    scan-on-startup: false
   qdrant:
     configure-on-startup: false
