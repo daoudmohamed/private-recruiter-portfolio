@@ -31,7 +31,6 @@ RUN chmod +x ./gradlew && ./gradlew dependencies --no-daemon || true
 
 # Copy source code
 COPY src ./src
-COPY documents ./documents
 COPY --from=frontend-builder /frontend/dist ./src/main/resources/static
 
 # Build the application
@@ -54,7 +53,6 @@ COPY --from=builder /app/build/libs/*.jar app.jar
 
 # Copy any additional resources (prompts, etc.)
 COPY --from=builder /app/src/main/resources/prompts ./prompts
-COPY --from=builder /app/documents ./documents
 
 # Set ownership
 RUN chown -R appuser:appgroup /app
