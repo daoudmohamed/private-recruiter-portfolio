@@ -9,7 +9,7 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
 import io.qdrant.client.QdrantClient
-import io.qdrant.client.grpc.Points
+import io.qdrant.client.grpc.Common
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -90,7 +90,7 @@ class DocumentIngestionServiceTest {
     @Test
     fun `deleteBySource should delete qdrant points and cleanup redis tracking`() = runBlocking {
         every {
-            qdrantClient.deleteAsync("knowledge-base", any<Points.Filter>())
+            qdrantClient.deleteAsync("knowledge-base", any<Common.Filter>())
         } returns Futures.immediateFuture(mockk(relaxed = true))
 
         val result = service.deleteBySource("cv.md")

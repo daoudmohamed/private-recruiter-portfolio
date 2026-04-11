@@ -4,6 +4,7 @@ import com.knowledgebase.config.QdrantProperties
 import com.knowledgebase.config.RedisKeyspace
 import io.qdrant.client.ConditionFactory
 import io.qdrant.client.QdrantClient
+import io.qdrant.client.grpc.Common
 import io.qdrant.client.grpc.Points
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -158,7 +159,7 @@ class DocumentIngestionService(
         logger.info { "Deleting documents from source: $filename" }
 
         return try {
-            val sourceFilter = Points.Filter.newBuilder()
+            val sourceFilter = Common.Filter.newBuilder()
                 .addMust(ConditionFactory.matchKeyword("source", filename))
                 .build()
 
