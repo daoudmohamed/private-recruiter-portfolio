@@ -33,9 +33,8 @@ repositories {
     maven { url = uri("https://repo.spring.io/snapshot") }
 }
 
-extra["springAiVersion"] = "2.0.0-M2"
+extra["springAiVersion"] = "2.0.0-M3"
 extra["testcontainersVersion"] = "1.21.3"
-extra["qdrantClientVersion"] = "1.16.0"
 
 dependencies {
     implementation(platform("io.grpc:grpc-bom:1.75.0"))
@@ -56,7 +55,6 @@ dependencies {
 
     // Spring AI - Vector Store (Qdrant)
     implementation("org.springframework.ai:spring-ai-starter-vector-store-qdrant")
-    implementation("io.qdrant:client:${property("qdrantClientVersion")}")
 
     // Spring AI - Document Readers
     implementation("org.springframework.ai:spring-ai-pdf-document-reader")

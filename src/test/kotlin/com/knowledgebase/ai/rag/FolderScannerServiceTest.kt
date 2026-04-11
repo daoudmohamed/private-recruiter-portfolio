@@ -27,18 +27,19 @@ class FolderScannerServiceTest {
     private val hashOperations: ReactiveHashOperations<String, String, String> = mockk()
 
     @Test
-    fun `scanFolder should create missing directory and return empty summary`() = runBlocking {
+    fun `scanFolder should skip missing directory and return explicit status`() = runBlocking {
         every { redisTemplate.opsForHash<String, String>() } returns hashOperations
         val documentsFolder = tempDir.resolve("documents")
         val service = buildService(documentsFolder)
 
         val summary = service.scanFolder()
 
-        assertThat(Files.exists(documentsFolder)).isTrue()
+        assertThat(Files.exists(documentsFolder)).isFalse()
         assertThat(summary.totalDocuments).isZero()
         assertThat(summary.documentsIngested).isEmpty()
         assertThat(summary.documentsSkipped).isZero()
         assertThat(summary.failedDocuments).isEmpty()
+        assertThat(summary.statusMessage).isEqualTo("Documents folder is not available at $documentsFolder")
     }
 
     @Test
@@ -70,6 +71,7 @@ class FolderScannerServiceTest {
         assertThat(summary.documentsSkipped).isEqualTo(1)
         assertThat(summary.documentsIngested).containsExactly("new.txt")
         assertThat(summary.failedDocuments).isEmpty()
+        assertThat(summary.statusMessage).isEqualTo("Scan completed: 1 ingested, 1 skipped, 0 failed")
         coVerify(exactly = 1) { documentIngestionService.ingestFile("new.txt", any<Resource>()) }
         coVerify(exactly = 0) { documentIngestionService.ingestFile("existing.md", any<Resource>()) }
     }

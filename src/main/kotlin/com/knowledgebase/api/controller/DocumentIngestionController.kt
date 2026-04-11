@@ -82,7 +82,8 @@ class DocumentIngestionController(
         return IngestionStatusResponse(
             totalDocuments = results.totalDocuments,
             documentsIngested = results.documentsIngested,
-            status = "Scan completed: ${results.documentsIngested.size} ingested, ${results.documentsSkipped} skipped, ${results.failedDocuments.size} failed"
+            status = results.statusMessage
+                ?: "Scan completed: ${results.documentsIngested.size} ingested, ${results.documentsSkipped} skipped, ${results.failedDocuments.size} failed"
         )
     }
 

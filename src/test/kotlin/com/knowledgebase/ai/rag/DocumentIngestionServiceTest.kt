@@ -9,7 +9,8 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
 import io.qdrant.client.QdrantClient
-import io.qdrant.client.grpc.Common
+import io.qdrant.client.grpc.JsonWithInt
+import io.qdrant.client.grpc.Points
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -79,18 +80,34 @@ class DocumentIngestionServiceTest {
     }
 
     @Test
-    fun `listIngestedSources should return sorted sources from redis`() = runBlocking {
-        every { setOperations.members(RedisKeyspace.INGESTED_SOURCES_KEY) } returns Flux.just("b.md", "a.md")
+    fun `listIngestedSources should return sorted unique sources from qdrant`() = runBlocking {
+        every { qdrantClient.scrollAsync(any()) } returnsMany listOf(
+            Futures.immediateFuture(
+                scrollResponse(
+                    retrievedPointWithSource("b.md"),
+                    retrievedPointWithSource("a.md"),
+                    retrievedPointWithoutSource(),
+                    nextPageOffset = 42L
+                )
+            ),
+            Futures.immediateFuture(
+                scrollResponse(
+                    retrievedPointWithSource("a.md"),
+                    retrievedPointWithSource("c.pdf"),
+                    retrievedPointWithBlankSource()
+                )
+            )
+        )
 
         val result = service.listIngestedSources()
 
-        assertThat(result).containsExactly("a.md", "b.md")
+        assertThat(result).containsExactly("a.md", "b.md", "c.pdf")
     }
 
     @Test
     fun `deleteBySource should delete qdrant points and cleanup redis tracking`() = runBlocking {
         every {
-            qdrantClient.deleteAsync("knowledge-base", any<Common.Filter>())
+            qdrantClient.deleteAsync("knowledge-base", any<Points.Filter>())
         } returns Futures.immediateFuture(mockk(relaxed = true))
 
         val result = service.deleteBySource("cv.md")
@@ -98,5 +115,37 @@ class DocumentIngestionServiceTest {
         assertThat(result).isTrue()
         verify(exactly = 1) { setOperations.remove(RedisKeyspace.INGESTED_SOURCES_KEY, "cv.md") }
         verify(exactly = 1) { hashOperations.remove(RedisKeyspace.INGESTED_FILES_KEY, "cv.md") }
+    }
+
+    private fun retrievedPointWithSource(source: String): Points.RetrievedPoint {
+        return Points.RetrievedPoint.newBuilder()
+            .putPayload("source", JsonWithInt.Value.newBuilder().setStringValue(source).build())
+            .build()
+    }
+
+    private fun retrievedPointWithBlankSource(): Points.RetrievedPoint {
+        return Points.RetrievedPoint.newBuilder()
+            .putPayload("source", JsonWithInt.Value.newBuilder().setStringValue("   ").build())
+            .build()
+    }
+
+    private fun retrievedPointWithoutSource(): Points.RetrievedPoint {
+        return Points.RetrievedPoint.newBuilder()
+            .putPayload("ingested_at", JsonWithInt.Value.newBuilder().setStringValue("now").build())
+            .build()
+    }
+
+    private fun scrollResponse(
+        vararg points: Points.RetrievedPoint,
+        nextPageOffset: Long? = null
+    ): Points.ScrollResponse {
+        return Points.ScrollResponse.newBuilder()
+            .addAllResult(points.asList())
+            .apply {
+                nextPageOffset?.let {
+                    setNextPageOffset(Points.PointId.newBuilder().setNum(it).build())
+                }
+            }
+            .build()
     }
 }
