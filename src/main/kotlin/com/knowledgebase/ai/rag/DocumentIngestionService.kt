@@ -4,7 +4,7 @@ import com.knowledgebase.config.QdrantProperties
 import com.knowledgebase.config.RedisKeyspace
 import io.qdrant.client.ConditionFactory
 import io.qdrant.client.QdrantClient
-import io.qdrant.client.grpc.Common
+import io.qdrant.client.grpc.JsonWithInt
 import io.qdrant.client.grpc.Points
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -159,7 +159,7 @@ class DocumentIngestionService(
         logger.info { "Deleting documents from source: $filename" }
 
         return try {
-            val sourceFilter = Common.Filter.newBuilder()
+            val sourceFilter = Points.Filter.newBuilder()
                 .addMust(ConditionFactory.matchKeyword("source", filename))
                 .build()
 
@@ -183,19 +183,54 @@ class DocumentIngestionService(
     }
 
     /**
-     * List all ingested sources (not implemented - would require vector store scan).
+     * List all ingested sources directly from Qdrant.
      */
     suspend fun listIngestedSources(): List<String> {
         return try {
-            redisTemplate.opsForSet()
-                .members(RedisKeyspace.INGESTED_SOURCES_KEY)
-                .collectList()
-                .awaitSingle()
-                .sorted()
+            val sources = linkedSetOf<String>()
+            var nextPageOffset: Points.PointId? = null
+
+            do {
+                val request = Points.ScrollPoints.newBuilder()
+                    .setCollectionName(qdrantProperties.collectionName)
+                    .setLimit(256)
+                    .setWithPayload(
+                        Points.WithPayloadSelector.newBuilder()
+                            .setEnable(true)
+                            .build()
+                    )
+                    .apply {
+                        nextPageOffset?.let { setOffset(it) }
+                    }
+                    .build()
+
+                val response = withContext(Dispatchers.IO) {
+                    qdrantClient.scrollAsync(request).get()
+                }
+
+                response.resultList
+                    .mapNotNullTo(sources, ::extractSourceFromPayload)
+
+                nextPageOffset = if (response.hasNextPageOffset()) {
+                    response.nextPageOffset
+                } else {
+                    null
+                }
+            } while (nextPageOffset != null)
+
+            sources.sorted()
         } catch (e: Exception) {
             logger.error(e) { "Failed to list ingested sources" }
             emptyList()
         }
+    }
+
+    private fun extractSourceFromPayload(point: Points.RetrievedPoint): String? {
+        val source = point.payloadMap["source"] ?: return null
+        return source.takeIf(JsonWithInt.Value::hasStringValue)
+            ?.stringValue
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
     }
 
     private fun readPdf(resource: Resource): List<Document> {

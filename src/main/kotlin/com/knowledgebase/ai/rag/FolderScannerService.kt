@@ -39,10 +39,10 @@ class FolderScannerService(
         val path = Path.of(documentsFolder)
 
         if (!Files.exists(path)) {
-            logger.warn { "Documents folder does not exist: $documentsFolder. Creating it..." }
-            Files.createDirectories(path)
-            logger.info { "Created documents folder: $documentsFolder" }
-            return FolderScanSummary()
+            logger.warn { "Documents folder does not exist: $documentsFolder. Manual scan skipped." }
+            return FolderScanSummary(
+                statusMessage = "Documents folder is not available at $documentsFolder"
+            )
         }
 
         if (!path.isDirectory()) {
@@ -56,7 +56,9 @@ class FolderScannerService(
 
         if (files.isEmpty()) {
             logger.warn { "No supported files found in folder: $documentsFolder" }
-            return FolderScanSummary()
+            return FolderScanSummary(
+                statusMessage = "No supported files found in $documentsFolder"
+            )
         }
 
         logger.info { "Found ${files.size} file(s) to check" }
@@ -102,7 +104,8 @@ class FolderScannerService(
             totalDocuments = files.size,
             documentsIngested = results.filter { it.success }.map { it.filename },
             documentsSkipped = skippedCount,
-            failedDocuments = results.filter { !it.success }.map { it.filename }
+            failedDocuments = results.filter { !it.success }.map { it.filename },
+            statusMessage = "Scan completed: $successCount ingested, $skippedCount skipped, $failCount failed"
         )
     }
 
@@ -121,5 +124,6 @@ data class FolderScanSummary(
     val totalDocuments: Int = 0,
     val documentsIngested: List<String> = emptyList(),
     val documentsSkipped: Int = 0,
-    val failedDocuments: List<String> = emptyList()
+    val failedDocuments: List<String> = emptyList(),
+    val statusMessage: String? = null
 )
